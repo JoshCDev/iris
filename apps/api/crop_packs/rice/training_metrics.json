@@ -1,0 +1,72 @@
+{
+  "crop": "rice",
+  "architecture": "mobilenet_v3_large",
+  "device": "cuda",
+  "classes": [
+    "bacterial_leaf_blight",
+    "blast",
+    "brown_spot",
+    "tungro"
+  ],
+  "class_to_idx": {
+    "bacterial_leaf_blight": 0,
+    "blast": 1,
+    "brown_spot": 2,
+    "tungro": 3
+  },
+  "split_counts": {
+    "bacterial_leaf_blight": {
+      "train": 1108,
+      "val": 237,
+      "test": 239
+    },
+    "blast": {
+      "train": 1007,
+      "val": 216,
+      "test": 217
+    },
+    "brown_spot": {
+      "train": 1120,
+      "val": 240,
+      "test": 240
+    },
+    "tungro": {
+      "train": 915,
+      "val": 196,
+      "test": 197
+    }
+  },
+  "best_epoch": 5,
+  "best_val_accuracy": 1.0,
+  "best_macro_f1": 1.0,
+  "confusion_matrix": [
+    [
+      237,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      216,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      240,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      196
+    ]
+  ],
+  "limitations": [
+    "Public datasets are not a substitute for Indonesian field validation.",
+    "Some crop-pack classes may be missing when the selected dataset source does not provide images for them."
+  ]
+}

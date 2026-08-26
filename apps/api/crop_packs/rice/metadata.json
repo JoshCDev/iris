@@ -1,0 +1,17 @@
+{
+  "model_version": "rice-mobilenet-v3-large-v0.2.0-onnx",
+  "architecture": "MobileNetV3-Large",
+  "runtime": "onnxruntime-cpu",
+  "dataset_sources": [
+    "https://data.mendeley.com/datasets/fwcj7stb8r/1"
+  ],
+  "input_size": [224, 224],
+  "normalization": "imagenet",
+  "validation_notes": "First-pass CPU-trained model on Mendeley rice data. Validation accuracy 0.9055, macro F1 0.9036. Not Indonesian field-certified.",
+  "limitations": [
+    "The selected source does not include healthy rice images, so this ONNX model predicts the four disease classes only",
+    "Dataset may not represent all field conditions",
+    "Symptoms may overlap with nutrient stress or pest damage",
+    "Low-confidence results must be reviewed by an expert"
+  ]
+}

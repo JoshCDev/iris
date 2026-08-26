@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Contoh foto padi blast">
+  <rect width="640" height="420" fill="#eef4df"/>
+  <path d="M96 360C170 170 344 72 556 52C472 246 330 350 96 360Z" fill="#6fa544"/>
+  <path d="M135 330C254 232 356 151 518 84" fill="none" stroke="#eaf4cf" stroke-width="12" stroke-linecap="round"/>
+  <g fill="#5a3929" opacity=".92">
+    <ellipse cx="315" cy="190" rx="38" ry="18" transform="rotate(-28 315 190)"/>
+    <ellipse cx="405" cy="135" rx="30" ry="14" transform="rotate(-25 405 135)"/>
+    <ellipse cx="236" cy="255" rx="26" ry="12" transform="rotate(-31 236 255)"/>
+  </g>
+  <text x="34" y="58" fill="#173622" font-family="Trebuchet MS, sans-serif" font-size="28" font-weight="700">Contoh padi blast</text>
+</svg>

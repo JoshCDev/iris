@@ -1,0 +1,14 @@
+{
+  "days": 100,
+  "irrigations_awd": 23,
+  "irrigations_cf": 100,
+  "water_awd_m3": 5000.0,
+  "water_cf_m3": 8000.0,
+  "flooded_days_awd": 51,
+  "flooded_days_cf": 100,
+  "sf_w_eff": 0.8922,
+  "ch4_cf_kg": 130.0,
+  "ch4_awd_kg": 115.99,
+  "co2e_saved_t": 0.3784,
+  "water_saved_pct": 37.5
+}

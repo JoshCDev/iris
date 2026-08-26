@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+out/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Data / storage
+*.db
+*.sqlite3
+apps/api/storage/uploads/
+
+# Poster charts and build scripts (PDF stays)
+assets/poster/*.png
+assets/poster/*.py
+assets/poster/tmp_preview/
+
+# Internal planning / archive (not the public GitHub tree)
+docs/superpowers/
+docs/history/
+docs/citation-verification-*.md
+docs/competition/guidebook_extracted.txt
+reference/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,26 @@
+{
+  "lokasi": {
+    "adm4": "33.73.01.1003",
+    "provinsi": "Jawa Tengah",
+    "kotkab": "Kota Salatiga",
+    "kecamatan": "Sidorejo",
+    "desa": "Salatiga"
+  },
+  "data": [
+    {
+      "cuaca": [
+        [
+          {"local_datetime": "2026-01-01 00:00:00", "tp": 1.0},
+          {"local_datetime": "2026-01-01 06:00:00", "tp": 2.0}
+        ],
+        [
+          {"local_datetime": "2026-01-02 00:00:00", "tp": 0.5},
+          {"local_datetime": "2026-01-02 06:00:00", "tp": 0.0}
+        ],
+        [
+          {"local_datetime": "2026-01-03 00:00:00", "tp": 3.5}
+        ]
+      ]
+    }
+  ]
+}

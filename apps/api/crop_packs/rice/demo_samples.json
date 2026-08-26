@@ -1,0 +1,15 @@
+[
+  {
+    "file": "rice/rice-blast-demo.webp",
+    "label": "Rice blast demo",
+    "expected_class": "blast",
+    "annotations": [
+      {
+        "class_slug": "blast",
+        "label": "Expected blast lesion area",
+        "bbox": [0.34, 0.27, 0.32, 0.42],
+        "source": "curated_demo"
+      }
+    ]
+  }
+]

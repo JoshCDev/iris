@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Contoh foto padi bercak cokelat">
+  <rect width="640" height="420" fill="#f4edcf"/>
+  <path d="M92 344C180 145 362 84 548 72C470 230 318 342 92 344Z" fill="#80aa4d"/>
+  <path d="M126 326C256 233 365 154 513 94" fill="none" stroke="#eff5ce" stroke-width="11" stroke-linecap="round"/>
+  <g fill="#80533b">
+    <circle cx="262" cy="248" r="13"/>
+    <circle cx="312" cy="210" r="10"/>
+    <circle cx="372" cy="170" r="15"/>
+    <circle cx="426" cy="138" r="10"/>
+    <circle cx="215" cy="286" r="8"/>
+  </g>
+  <text x="34" y="58" fill="#173622" font-family="Trebuchet MS, sans-serif" font-size="28" font-weight="700">Contoh padi bercak</text>
+</svg>

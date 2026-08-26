@@ -1,0 +1,15 @@
+{
+  "slug": "rice",
+  "name_en": "Rice",
+  "name_id": "Padi",
+  "status": "active",
+  "model_path": "model.onnx",
+  "class_mapping_path": "class_mapping.json",
+  "advisory_languages": ["id", "en"],
+  "limitations": [
+    "AI-assisted triage only",
+    "Not a laboratory diagnosis",
+    "Requires local validation before field deployment"
+  ]
+}
+

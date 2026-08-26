@@ -1,0 +1,63 @@
+[
+  {
+    "class_slug": "healthy",
+    "disease_name_en": "Healthy",
+    "disease_name_id": "Sehat",
+    "summary": "Gambar terlihat menyerupai daun padi sehat, tetapi tetap lakukan pemantauan rutin karena gejala awal dapat samar.",
+    "visual_signs": ["Warna daun relatif merata.", "Tidak tampak bercak luas atau pola menguning yang kuat."],
+    "immediate_steps": ["Simpan foto sebagai catatan kondisi lahan.", "Ambil foto pembanding dari beberapa tanaman lain."],
+    "prevention": ["Pantau perubahan warna daun setiap beberapa hari.", "Jaga kebersihan lahan dan catat kondisi pertanaman."],
+    "expert_review_triggers": ["Minta tinjauan penyuluh bila muncul bercak, penguningan, atau gejala menyebar."],
+    "do_not_claim": ["diagnosis resmi", "tanaman bebas penyakit secara pasti"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  },
+  {
+    "class_slug": "bacterial_leaf_blight",
+    "disease_name_en": "Bacterial Leaf Blight",
+    "disease_name_id": "Hawar daun bakteri (BLB)",
+    "summary": "Gejala visual pada gambar menyerupai sinyal hawar daun bakteri pada padi. Hasil ini perlu dikonfirmasi dengan pengamatan lapangan.",
+    "visual_signs": ["Tepi daun tampak menguning atau mengering.", "Area daun dapat terlihat seperti terbakar dari ujung atau pinggir."],
+    "immediate_steps": ["Ambil 2-3 foto tambahan dari daun dan rumpun berbeda.", "Catat lokasi, umur tanaman, dan sebaran gejala.", "Pisahkan catatan untuk petak yang menunjukkan gejala serupa."],
+    "prevention": ["Kurangi perpindahan sisa tanaman sakit antarpetak.", "Pantau lahan setelah hujan atau angin kencang.", "Gunakan catatan gejala untuk diskusi dengan penyuluh."],
+    "expert_review_triggers": ["Hubungi penyuluh bila gejala meluas pada banyak rumpun.", "Minta verifikasi sebelum tindakan pengendalian lanjutan."],
+    "do_not_claim": ["diagnosis pasti", "rekomendasi dosis pestisida", "jaminan pemulihan hasil"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  },
+  {
+    "class_slug": "blast",
+    "disease_name_en": "Blast",
+    "disease_name_id": "Blast",
+    "summary": "Gejala pada gambar kemungkinan menyerupai penyakit blast pada padi, terutama bila bercak berbentuk belah ketupat muncul pada daun.",
+    "visual_signs": ["Bercak abu-abu atau cokelat pada daun.", "Bercak dapat memiliki tepi lebih gelap.", "Gejala dapat muncul berkelompok pada beberapa daun."],
+    "immediate_steps": ["Ambil foto dari dekat dan dari jarak rumpun.", "Catat apakah gejala muncul di beberapa titik lahan.", "Minta tinjauan penyuluh bila tingkat keparahan meningkat."],
+    "prevention": ["Pantau kelembapan dan kepadatan tanaman.", "Jaga kebersihan sisa tanaman sakit.", "Gunakan pengamatan berulang untuk melihat arah penyebaran."],
+    "expert_review_triggers": ["Segera minta verifikasi bila bercak menyebar cepat.", "Minta saran penyuluh sebelum tindakan kimia atau perubahan budidaya besar."],
+    "do_not_claim": ["diagnosis laboratorium", "pengobatan pasti", "dosis bahan kimia"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  },
+  {
+    "class_slug": "brown_spot",
+    "disease_name_en": "Brown Spot",
+    "disease_name_id": "Bercak cokelat",
+    "summary": "Gambar menunjukkan sinyal yang dapat menyerupai bercak cokelat pada padi. Gejala serupa juga dapat dipengaruhi kondisi hara atau stres lingkungan.",
+    "visual_signs": ["Bercak kecil berwarna cokelat pada daun.", "Beberapa bercak dapat memiliki pusat lebih terang.", "Sebaran bercak dapat tidak merata."],
+    "immediate_steps": ["Ambil foto tambahan pada daun tua dan daun muda.", "Catat kondisi lahan, air, dan area yang terdampak.", "Bandingkan dengan tanaman sekitar."],
+    "prevention": ["Pantau tanaman yang menunjukkan bercak baru.", "Kelola sisa tanaman sakit secara higienis.", "Diskusikan kemungkinan faktor hara dengan penyuluh."],
+    "expert_review_triggers": ["Minta tinjauan bila bercak meluas atau tanaman tampak lemah.", "Konfirmasi dengan penyuluh sebelum memilih tindakan pengendalian."],
+    "do_not_claim": ["penyebab tunggal yang pasti", "dosis pestisida", "jaminan hasil"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  },
+  {
+    "class_slug": "tungro",
+    "disease_name_en": "Tungro",
+    "disease_name_id": "Tungro",
+    "summary": "Gambar dapat menunjukkan sinyal yang menyerupai tungro pada padi. Karena tungro termasuk risiko tinggi, hasil perlu segera diverifikasi.",
+    "visual_signs": ["Daun tampak menguning atau oranye.", "Pertumbuhan tanaman dapat terlihat kerdil.", "Gejala sering tampak pada rumpun tertentu lalu meluas."],
+    "immediate_steps": ["Ambil foto seluruh rumpun dan daun yang menguning.", "Catat apakah pola gejala muncul pada petak berdekatan.", "Laporkan ke penyuluh atau petugas lapangan bila kasus berulang."],
+    "prevention": ["Pantau keberadaan gejala serupa di sekitar lahan.", "Jaga catatan waktu munculnya gejala.", "Gunakan laporan berulang untuk membantu prioritas inspeksi lapangan."],
+    "expert_review_triggers": ["Minta verifikasi segera bila banyak tanaman menguning atau kerdil.", "Koordinasikan dengan penyuluh karena risiko penyebaran perlu ditinjau."],
+    "do_not_claim": ["konfirmasi virus", "rekomendasi bahan kimia", "tanpa perlu inspeksi"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  }
+]
+

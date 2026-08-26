@@ -1,0 +1,63 @@
+[
+  {
+    "class_slug": "healthy",
+    "disease_name_en": "Healthy",
+    "disease_name_id": "Sehat",
+    "summary": "The image resembles a healthy rice leaf, but routine monitoring is still recommended because early symptoms can be subtle.",
+    "visual_signs": ["Leaf color appears relatively even.", "No broad spotting or strong yellowing pattern is visible."],
+    "immediate_steps": ["Keep the image as a field condition record.", "Take comparison photos from several nearby plants."],
+    "prevention": ["Monitor leaf color changes every few days.", "Keep field hygiene records and note unusual symptoms."],
+    "expert_review_triggers": ["Ask an extension worker if spots, yellowing, or spreading symptoms appear."],
+    "do_not_claim": ["official diagnosis", "certain disease-free status"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  },
+  {
+    "class_slug": "bacterial_leaf_blight",
+    "disease_name_en": "Bacterial Leaf Blight",
+    "disease_name_id": "Hawar Daun Bakteri",
+    "summary": "The visual pattern resembles a suspected bacterial leaf blight signal in rice. Field observation is needed for confirmation.",
+    "visual_signs": ["Leaf edges may look yellowed or dry.", "Affected tissue can look scorched from the tip or margin."],
+    "immediate_steps": ["Take 2-3 additional photos from different leaves and hills.", "Record location, crop age, and spread pattern.", "Separate notes for plots with similar symptoms."],
+    "prevention": ["Avoid moving diseased plant residue between plots.", "Monitor after rain or strong wind.", "Use symptom notes when discussing with an extension worker."],
+    "expert_review_triggers": ["Contact an extension worker if symptoms spread across many hills.", "Request verification before taking further control steps."],
+    "do_not_claim": ["confirmed diagnosis", "pesticide dosage", "guaranteed recovery"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  },
+  {
+    "class_slug": "blast",
+    "disease_name_en": "Blast",
+    "disease_name_id": "Blast",
+    "summary": "The image likely resembles a rice blast signal, especially if diamond-shaped lesions are visible on leaves.",
+    "visual_signs": ["Gray or brown spots may appear on leaves.", "Lesions can have darker margins.", "Symptoms may cluster on several leaves."],
+    "immediate_steps": ["Take close-up and whole-hill photos.", "Record whether symptoms appear in several field points.", "Ask for extension review if severity increases."],
+    "prevention": ["Monitor humidity and dense planting areas.", "Keep diseased plant residue managed hygienically.", "Use repeated observations to track spread direction."],
+    "expert_review_triggers": ["Request verification quickly if lesions spread fast.", "Ask an expert before chemical action or major cultivation changes."],
+    "do_not_claim": ["laboratory diagnosis", "guaranteed treatment", "chemical dosage"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  },
+  {
+    "class_slug": "brown_spot",
+    "disease_name_en": "Brown Spot",
+    "disease_name_id": "Bercak Cokelat",
+    "summary": "The image shows a signal that may resemble brown spot in rice. Similar symptoms can also relate to nutrient or environmental stress.",
+    "visual_signs": ["Small brown spots on leaves.", "Some spots may have lighter centers.", "Spot distribution can be uneven."],
+    "immediate_steps": ["Take more photos from older and younger leaves.", "Record water, field condition, and affected area.", "Compare with nearby plants."],
+    "prevention": ["Monitor plants showing new spots.", "Handle diseased residues hygienically.", "Discuss possible nutrient factors with an extension worker."],
+    "expert_review_triggers": ["Request review if spots expand or plants look weak.", "Confirm with an expert before selecting a control action."],
+    "do_not_claim": ["single confirmed cause", "pesticide dosage", "yield guarantee"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  },
+  {
+    "class_slug": "tungro",
+    "disease_name_en": "Tungro",
+    "disease_name_id": "Tungro",
+    "summary": "The image may show a signal resembling tungro in rice. Because tungro is high-risk, expert verification is recommended.",
+    "visual_signs": ["Leaves may appear yellow or orange.", "Plants can look stunted.", "Symptoms may start in specific hills and then spread."],
+    "immediate_steps": ["Take whole-hill photos and close-ups of yellowing leaves.", "Record whether nearby plots show similar symptoms.", "Report repeated cases to an extension worker or field officer."],
+    "prevention": ["Monitor similar symptoms around the field.", "Keep records of when symptoms first appear.", "Use repeated reports to help prioritize field inspection."],
+    "expert_review_triggers": ["Request prompt verification if many plants yellow or become stunted.", "Coordinate with extension officers because spread risk needs review."],
+    "do_not_claim": ["virus confirmation", "chemical recommendation", "no inspection needed"],
+    "disclaimer": "This result is AI-assisted triage only. It is not a laboratory diagnosis and should not replace local agricultural expert review."
+  }
+]
+

@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+numpy
+pillow
+onnxruntime
+openai
+httpx
+pytest
+requests

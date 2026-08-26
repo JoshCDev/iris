@@ -1,0 +1,38 @@
+[
+  {
+    "class_slug": "healthy",
+    "risk_weight": 0.0,
+    "default_expert_review": false,
+    "high_risk_conditions": ["new symptoms appear", "multiple nearby plants change color"],
+    "monitoring_priority": "low"
+  },
+  {
+    "class_slug": "bacterial_leaf_blight",
+    "risk_weight": 0.75,
+    "default_expert_review": true,
+    "high_risk_conditions": ["high confidence disease prediction", "multiple reports in same area", "rapid severity increase"],
+    "monitoring_priority": "high"
+  },
+  {
+    "class_slug": "blast",
+    "risk_weight": 0.85,
+    "default_expert_review": true,
+    "high_risk_conditions": ["high confidence disease prediction", "multiple reports in same area", "rapid severity increase"],
+    "monitoring_priority": "high"
+  },
+  {
+    "class_slug": "brown_spot",
+    "risk_weight": 0.55,
+    "default_expert_review": false,
+    "high_risk_conditions": ["many plants affected", "symptoms spread after repeated observations"],
+    "monitoring_priority": "medium"
+  },
+  {
+    "class_slug": "tungro",
+    "risk_weight": 0.9,
+    "default_expert_review": true,
+    "high_risk_conditions": ["yellowing and stunting appear together", "multiple reports in same area", "rapid spread"],
+    "monitoring_priority": "high"
+  }
+]
+

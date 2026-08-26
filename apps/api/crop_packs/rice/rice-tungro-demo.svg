@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Contoh foto padi tungro">
+  <rect width="640" height="420" fill="#fff8db"/>
+  <path d="M118 360C178 152 350 65 552 54C486 258 330 356 118 360Z" fill="#d6b344"/>
+  <path d="M148 332C265 236 375 154 515 82" fill="none" stroke="#f9edb5" stroke-width="12" stroke-linecap="round"/>
+  <path d="M126 350C310 346 452 260 548 54C476 302 316 391 126 350Z" fill="#c18c31" opacity=".42"/>
+  <text x="34" y="58" fill="#173622" font-family="Trebuchet MS, sans-serif" font-size="28" font-weight="700">Contoh padi tungro</text>
+</svg>

@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "wet_weather_threshold_mm": 15.0,
+  "rules": [
+    {
+      "id": "brown_spot_deep_dry",
+      "when": {"disease": ["brown_spot"], "awd_state": ["deep_dry", "beyond_trigger"], "wet_weather": null},
+      "risk_level": "high",
+      "drivers_id": ["Cekaman air memicu bercak cokelat"],
+      "drivers_en": ["Moisture stress from deep drying triggers brown spot"],
+      "irrigation_note": "consider a shorter AWD cycle"
+    },
+    {
+      "id": "brown_spot_shallow_dry",
+      "when": {"disease": ["brown_spot"], "awd_state": ["shallow_dry"], "wet_weather": null},
+      "risk_level": "medium",
+      "drivers_id": ["Pengeringan ringan mulai menaikkan risiko bercak cokelat"],
+      "drivers_en": ["Light drying begins to raise brown spot risk"]
+    },
+    {
+      "id": "brown_spot_flooded",
+      "when": {"disease": ["brown_spot"], "awd_state": ["flooded"], "wet_weather": null},
+      "risk_level": "low",
+      "drivers_id": ["Sawah tergenang menekan risiko bercak cokelat"],
+      "drivers_en": ["Flooded field suppresses brown spot risk"]
+    },
+    {
+      "id": "blast_wet_canopy",
+      "when": {"disease": ["blast"], "awd_state": ["flooded", "flowering_lock"], "wet_weather": true},
+      "risk_level": "high",
+      "drivers_id": ["Kanopi basah berkepanjangan memicu blast"],
+      "drivers_en": ["Prolonged wet canopy favors blast"]
+    },
+    {
+      "id": "blast_flooded",
+      "when": {"disease": ["blast"], "awd_state": ["flooded"], "wet_weather": false},
+      "risk_level": "medium",
+      "drivers_id": ["Genangan menaikkan kelembapan kanopi; risiko blast sedang tanpa hujan"],
+      "drivers_en": ["Standing water raises canopy humidity; moderate blast risk without rain"]
+    },
+    {
+      "id": "blast_other",
+      "when": {"disease": ["blast"], "awd_state": ["shallow_dry", "deep_dry", "beyond_trigger", "flowering_lock"], "wet_weather": false},
+      "risk_level": "low",
+      "drivers_id": ["Kondisi kering membatasi perkembangan blast"],
+      "drivers_en": ["Dry conditions limit blast development"]
+    },
+    {
+      "id": "blb_wet_flow",
+      "when": {"disease": ["bacterial_leaf_blight"], "awd_state": ["flooded", "flowering_lock"], "wet_weather": true},
+      "risk_level": "high",
+      "drivers_id": ["Aliran air mempercepat sebaran BLB"],
+      "drivers_en": ["Flowing water accelerates bacterial leaf blight spread"],
+      "irrigation_note": "use intermittent water; avoid flow between plots"
+    },
+    {
+      "id": "blb_other",
+      "when": {"disease": ["bacterial_leaf_blight"], "awd_state": ["flooded", "flowering_lock", "shallow_dry", "deep_dry", "beyond_trigger"], "wet_weather": false},
+      "risk_level": "low",
+      "drivers_id": ["Tanpa hujan, sebaran BLB relatif terkendali; lanjutkan pemantauan"],
+      "drivers_en": ["Without rain, BLB spread stays limited; continue monitoring"]
+    },
+    {
+      "id": "tungro_any",
+      "when": {"disease": ["tungro"], "awd_state": ["flooded", "flowering_lock", "shallow_dry", "deep_dry", "beyond_trigger"], "wet_weather": null},
+      "risk_level": "medium",
+      "drivers_id": ["Pantau wereng batang cokelat (vektor tungro)"],
+      "drivers_en": ["Monitor brown planthopper (tungro vector)"]
+    },
+    {
+      "id": "none_any",
+      "when": {"disease": ["none"], "awd_state": ["flooded", "flowering_lock", "shallow_dry", "deep_dry", "beyond_trigger"], "wet_weather": null},
+      "risk_level": "low",
+      "drivers_id": ["Tidak ada gejala terdeteksi; lanjutkan pemantauan"],
+      "drivers_en": ["No symptoms detected; continue monitoring"]
+    }
+  ],
+  "fallback": {
+    "risk_level": "low",
+    "drivers_id": ["Kombinasi kondisi belum memiliki aturan khusus; lanjutkan pemantauan"],
+    "drivers_en": ["No specific rule for this condition combination; continue monitoring"],
+    "irrigation_note": "continue routine monitoring"
+  }
+}

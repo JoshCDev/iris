@@ -1,0 +1,33 @@
+{
+  "0": {
+    "class_slug": "healthy",
+    "name_en": "Healthy",
+    "name_id": "Sehat",
+    "risk_weight": 0.0
+  },
+  "1": {
+    "class_slug": "bacterial_leaf_blight",
+    "name_en": "Bacterial Leaf Blight",
+    "name_id": "Hawar daun bakteri (BLB)",
+    "risk_weight": 0.75
+  },
+  "2": {
+    "class_slug": "blast",
+    "name_en": "Blast",
+    "name_id": "Blast",
+    "risk_weight": 0.85
+  },
+  "3": {
+    "class_slug": "brown_spot",
+    "name_en": "Brown Spot",
+    "name_id": "Bercak cokelat",
+    "risk_weight": 0.55
+  },
+  "4": {
+    "class_slug": "tungro",
+    "name_en": "Tungro",
+    "name_id": "Tungro",
+    "risk_weight": 0.9
+  }
+}
+

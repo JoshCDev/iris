@@ -1,0 +1,67 @@
+{
+  "evaluated_at": "2026-08-26",
+  "dataset": "public Mendeley rice-disease dataset, prepared test split (data/processed/rice/test; split created by the original training pipeline, no augmentation on test)",
+  "model": "MobileNetV3-Large ONNX (production crop_packs/rice/model.onnx)",
+  "n_images": 893,
+  "overall_accuracy": 1.0,
+  "macro_f1": 1.0,
+  "mean_confidence_when_correct": 0.9987,
+  "avg_latency_ms_cpu": 4.3,
+  "per_class": {
+    "bacterial_leaf_blight": {
+      "support": 239,
+      "correct": 239,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "blast": {
+      "support": 217,
+      "correct": 217,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "brown_spot": {
+      "support": 240,
+      "correct": 240,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "tungro": {
+      "support": 197,
+      "correct": 197,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  },
+  "confusion_matrix_rows_true_cols_pred": {
+    "bacterial_leaf_blight": [
+      239,
+      0,
+      0,
+      0
+    ],
+    "blast": [
+      0,
+      217,
+      0,
+      0
+    ],
+    "brown_spot": [
+      0,
+      0,
+      240,
+      0
+    ],
+    "tungro": [
+      0,
+      0,
+      0,
+      197
+    ]
+  },
+  "provenance_caveat": "Test images originate from the same public dataset used for training (pipeline-separated split). Independent field validation with Indonesian leaves is the next milestone."
+}
