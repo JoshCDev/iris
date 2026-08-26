@@ -22,6 +22,8 @@ out/
 *.db
 *.sqlite3
 apps/api/storage/uploads/
+experiments/data/
+experiments/outputs/rice_v03/
 
 # Poster (PDF, charts, build scripts stay local)
 assets/poster/*.png

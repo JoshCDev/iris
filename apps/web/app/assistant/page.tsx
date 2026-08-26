@@ -17,7 +17,8 @@ export default function AssistantPage() {
             <h1 className="page-title">Ask the plot record</h1>
             <p className="section-copy" style={{ marginTop: 8 }}>
               Answers use this plot's water, leaf, and knowledge base. Tool
-              steps are listed under each reply.
+              steps are listed under each reply. Rain advice is a
+              recommendation: BMKG plus a LogReg flag for human review.
             </p>
           </div>
         </div>

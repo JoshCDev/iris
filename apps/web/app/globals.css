@@ -1194,6 +1194,46 @@ video {
   line-height: 1.5;
 }
 
+.impact-dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.impact-dual__col {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.impact-dual__col--lit {
+  background: var(--surface-tint);
+}
+
+.impact-dual__kicker {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--field-700);
+}
+
+.impact-dual__lead {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.impact-dual ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
 /* ── Fusion banner ─────────────────────────────────────────────────────── */
 .fusion-banner {
   display: grid;
@@ -1566,6 +1606,10 @@ video {
 
   .receipt-card dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .impact-dual {
+    grid-template-columns: 1fr;
   }
 }
 

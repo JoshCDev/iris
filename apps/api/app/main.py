@@ -23,6 +23,7 @@ from app.irrigation.reason_text import english_reason
 from app.irrigation.scheduler import REFILL_CM, decide
 from app.irrigation.bmkg_areas import ensure_bmkg_areas, lookup_bmkg_areas
 from app.irrigation.weather_bmkg import fetch_forecast_72h_rain
+from app.irrigation.rain_hitl import weather_payload
 from app.receipts import (
     E3_CLAIM_NOTE,
     PLOT_CLAIM_NOTE,
@@ -338,15 +339,16 @@ def weather_forecast(plot_id: int | None = None):
     fresh = (entry is not None
              and now - entry["ts"] < _WEATHER_TTL_S)
     if fresh:
-        return {"rain72_mm": entry["value"], "stale": False}
+        return entry["payload"]
     try:
         rain = fetch_forecast_72h_rain(adm4=adm4)
     except Exception:
         log.warning("weather fetch failed; failing open")
         cached = entry["value"] if entry is not None else 0.0
-        return {"rain72_mm": cached, "stale": True}
-    _weather_cache[adm4] = {"ts": now, "value": rain}
-    return {"rain72_mm": rain, "stale": False}
+        return weather_payload(cached, True)
+    payload = weather_payload(rain, False)
+    _weather_cache[adm4] = {"ts": now, "value": rain, "payload": payload}
+    return payload
 
 
 @app.get("/api/weather/areas")

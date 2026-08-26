@@ -1,72 +1,278 @@
 {
   "crop": "rice",
+  "version": "rice-mobilenet-v3-large-v0.3.0-onnx",
   "architecture": "mobilenet_v3_large",
   "device": "cuda",
   "classes": [
     "bacterial_leaf_blight",
     "blast",
     "brown_spot",
+    "healthy",
     "tungro"
   ],
   "class_to_idx": {
     "bacterial_leaf_blight": 0,
     "blast": 1,
     "brown_spot": 2,
-    "tungro": 3
+    "healthy": 3,
+    "tungro": 4
   },
   "split_counts": {
     "bacterial_leaf_blight": {
-      "train": 1108,
-      "val": 237,
-      "test": 239
+      "train": 1257,
+      "val": 269,
+      "test": 271
     },
     "blast": {
-      "train": 1007,
-      "val": 216,
-      "test": 217
+      "train": 1881,
+      "val": 403,
+      "test": 404
     },
     "brown_spot": {
-      "train": 1120,
-      "val": 240,
-      "test": 240
+      "train": 1507,
+      "val": 322,
+      "test": 324
+    },
+    "healthy": {
+      "train": 1224,
+      "val": 262,
+      "test": 263
     },
     "tungro": {
-      "train": 915,
-      "val": 196,
-      "test": 197
+      "train": 1671,
+      "val": 358,
+      "test": 359
     }
   },
-  "best_epoch": 5,
-  "best_val_accuracy": 1.0,
-  "best_macro_f1": 1.0,
-  "confusion_matrix": [
+  "best_epoch": 24,
+  "best_val_accuracy": 0.976456009913259,
+  "best_macro_f1": 0.9768526597975061,
+  "test_accuracy": 0.9784083898827884,
+  "test_macro_f1": 0.9782549632340132,
+  "test_confusion": [
     [
-      237,
+      265,
+      3,
+      1,
+      1,
+      1
+    ],
+    [
+      1,
+      394,
       0,
-      0,
-      0
+      5,
+      4
+    ],
+    [
+      3,
+      2,
+      312,
+      3,
+      4
     ],
     [
       0,
-      216,
+      1,
       0,
-      0
+      261,
+      1
     ],
     [
+      1,
+      1,
       0,
-      0,
-      240,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      196
+      3,
+      354
     ]
   ],
-  "limitations": [
-    "Public datasets are not a substitute for Indonesian field validation.",
-    "Some crop-pack classes may be missing when the selected dataset source does not provide images for them."
+  "test_per_class": {
+    "bacterial_leaf_blight": {
+      "support": 271,
+      "correct": 265,
+      "recall": 0.9779
+    },
+    "blast": {
+      "support": 404,
+      "correct": 394,
+      "recall": 0.9752
+    },
+    "brown_spot": {
+      "support": 324,
+      "correct": 312,
+      "recall": 0.963
+    },
+    "healthy": {
+      "support": 263,
+      "correct": 261,
+      "recall": 0.9924
+    },
+    "tungro": {
+      "support": 359,
+      "correct": 354,
+      "recall": 0.9861
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 1.1248,
+      "val_acc": 0.7912,
+      "val_macro_f1": 0.79
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.9184,
+      "val_acc": 0.8408,
+      "val_macro_f1": 0.8383
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.8251,
+      "val_acc": 0.881,
+      "val_macro_f1": 0.8794
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.7923,
+      "val_acc": 0.9083,
+      "val_macro_f1": 0.9101
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.7608,
+      "val_acc": 0.9275,
+      "val_macro_f1": 0.9286
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.7072,
+      "val_acc": 0.9318,
+      "val_macro_f1": 0.9319
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.7096,
+      "val_acc": 0.948,
+      "val_macro_f1": 0.9488
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.732,
+      "val_acc": 0.956,
+      "val_macro_f1": 0.9564
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.7166,
+      "val_acc": 0.9554,
+      "val_macro_f1": 0.9559
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.6765,
+      "val_acc": 0.9622,
+      "val_macro_f1": 0.9624
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.6641,
+      "val_acc": 0.9603,
+      "val_macro_f1": 0.9608
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.7006,
+      "val_acc": 0.9672,
+      "val_macro_f1": 0.9671
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.6744,
+      "val_acc": 0.9672,
+      "val_macro_f1": 0.9681
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.6552,
+      "val_acc": 0.9684,
+      "val_macro_f1": 0.9691
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.6566,
+      "val_acc": 0.969,
+      "val_macro_f1": 0.9699
+    },
+    {
+      "epoch": 16,
+      "train_loss": 0.6338,
+      "val_acc": 0.9715,
+      "val_macro_f1": 0.9717
+    },
+    {
+      "epoch": 17,
+      "train_loss": 0.6606,
+      "val_acc": 0.974,
+      "val_macro_f1": 0.9747
+    },
+    {
+      "epoch": 18,
+      "train_loss": 0.6299,
+      "val_acc": 0.9715,
+      "val_macro_f1": 0.9719
+    },
+    {
+      "epoch": 19,
+      "train_loss": 0.6481,
+      "val_acc": 0.974,
+      "val_macro_f1": 0.9746
+    },
+    {
+      "epoch": 20,
+      "train_loss": 0.6577,
+      "val_acc": 0.9752,
+      "val_macro_f1": 0.9756
+    },
+    {
+      "epoch": 21,
+      "train_loss": 0.6762,
+      "val_acc": 0.9752,
+      "val_macro_f1": 0.9758
+    },
+    {
+      "epoch": 22,
+      "train_loss": 0.6503,
+      "val_acc": 0.9752,
+      "val_macro_f1": 0.9758
+    },
+    {
+      "epoch": 23,
+      "train_loss": 0.6576,
+      "val_acc": 0.9752,
+      "val_macro_f1": 0.9757
+    },
+    {
+      "epoch": 24,
+      "train_loss": 0.6552,
+      "val_acc": 0.9765,
+      "val_macro_f1": 0.9769
+    },
+    {
+      "epoch": 25,
+      "train_loss": 0.6086,
+      "val_acc": 0.9765,
+      "val_macro_f1": 0.9769
+    }
+  ],
+  "sources": [
+    "mendeley-fwcj7stb8r-deduped",
+    "paddy-doctor-huggingface"
+  ],
+  "notes": [
+    "Duplicates removed by MD5 before split.",
+    "Paddy Doctor normal class mapped to healthy.",
+    "Last 8 MobileNetV3 feature blocks unfrozen.",
+    "Serving preprocess is Resize(256)+CenterCrop(224)."
   ]
 }

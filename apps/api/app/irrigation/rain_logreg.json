@@ -1,0 +1,29 @@
+{
+  "weights": [
+    -2.185184,
+    0.11628,
+    -0.039219,
+    0.644019,
+    1.640638
+  ],
+  "feature_order": [
+    "bias",
+    "rain_1d_mm",
+    "rain_3d_mm",
+    "sin_doy",
+    "cos_doy"
+  ],
+  "target": "next_72h_precip_ge_15mm",
+  "n": 3154,
+  "base_rate_wet": 0.5022,
+  "train_accuracy": 0.5891,
+  "source": "Open-Meteo ERA5-land daily precipitation, Salatiga",
+  "latitude": -7.331,
+  "longitude": 110.508,
+  "start": "2018-01-01",
+  "end": "2026-08-26",
+  "notes": [
+    "Second opinion only. BMKG remains the scheduler rain input.",
+    "Not a BMKG replacement and not a field rain gauge."
+  ]
+}

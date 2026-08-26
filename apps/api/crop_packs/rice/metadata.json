@@ -1,16 +1,20 @@
 {
-  "model_version": "rice-mobilenet-v3-large-v0.2.0-onnx",
+  "model_version": "rice-mobilenet-v3-large-v0.3.0-onnx",
   "architecture": "MobileNetV3-Large",
   "runtime": "onnxruntime-cpu",
   "dataset_sources": [
-    "https://data.mendeley.com/datasets/fwcj7stb8r/1"
+    "https://data.mendeley.com/datasets/fwcj7stb8r/1",
+    "https://huggingface.co/datasets/Project-AgML/paddy_disease_classification"
   ],
-  "input_size": [224, 224],
+  "input_size": [
+    224,
+    224
+  ],
   "normalization": "imagenet",
-  "validation_notes": "First-pass CPU-trained model on Mendeley rice data. Validation accuracy 0.9055, macro F1 0.9036. Not Indonesian field-certified.",
+  "validation_notes": "v0.3 deduped Mendeley + Paddy Doctor field photos. Held-out test accuracy 0.9784, macro F1 0.9783. Not Indonesian field-certified.",
   "limitations": [
-    "The selected source does not include healthy rice images, so this ONNX model predicts the four disease classes only",
-    "Dataset may not represent all field conditions",
+    "Healthy class comes from Paddy Doctor (India), not Indonesian fields",
+    "Mendeley studio photos and Paddy Doctor field photos remain domain-shifted from many phone snapshots",
     "Symptoms may overlap with nutrient stress or pest damage",
     "Low-confidence results must be reviewed by an expert"
   ]

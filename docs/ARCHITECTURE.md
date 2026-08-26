@@ -13,11 +13,12 @@ database SQLite.
 | Web dashboard | `apps/web` | Next.js App Router + TypeScript + Tailwind, port 3000; seluruh panggilan `/api/*` di-rewrite sebagai proxy ke FastAPI `:8000` |
 | Ingest & decision API | `apps/api` | FastAPI port 8000; menerima pembacaan sensor, menjalankan keputusan **pada saat ingest**, mengekspos status/riwayat/receipt |
 | Stage machine AWD (Pilar 1) | `apps/api/app/irrigation/protocol.py` | Fase: establishment <14 hari; veg_awd <55 (pemicu −15 cm); flowering_lock <80 (**wajib genang ≥ +3 cm**); grain_fill_awd <100 (−15 cm); harvest ≥100 |
-| Scheduler & rain-skip | `apps/api/app/irrigation/scheduler.py`, `water.py` | Keputusan irigasi per event hujan: skip bila rain72 ≥ `RAIN_SKIP_MM` = 15 mm/72 jam, dengan hard floor pemicu −10 cm; establishment & flowering_lock dikecualikan dari skip |
+| Scheduler & rain-skip | `apps/api/app/irrigation/scheduler.py` | Keputusan irigasi: HOLD_FOR_RAIN bila rain72 ≥ 15 mm/72 jam dan level masih di atas hard floor (pemicu −10 cm); establishment & flowering_lock dikecualikan. Jika muka air ≥ 0 cm dan di atas pemicu: WAIT **"Do not drain"** (AWD mengering lewat ET, bukan pompa keluar). `DRAIN` hanya panen |
+| Rain HITL (LogReg) | `apps/api/app/irrigation/rain_hitl.py`, `rain_logreg.json` | Opini kedua persistensi/klimatologi vs BMKG. Tidak pernah mengubah `rain72` yang masuk `decide()`. Flag `needs_review` jika basah/kering tidak sama atau P(wet) 0,35–0,65. Dilatih Open-Meteo harian Salatiga (n=3154, akurasi latih 0,59 vs base rate ~0,50) |
 | Akuntansi karbon | `apps/api/app/irrigation/ipcc.py` | Receipt IPCC Tier-1: EF 1,30 (Tbl 5.11), SF_w 1/0,78 (Tbl 5.12), GWP 27 (AR6); label `simulated \| measured \| projected` |
 | Cuaca | `apps/api/app/irrigation/weather_bmkg.py` + `bmkg_areas.py` | Prakiraan BMKG per kelurahan (`adm4`). Katalog 83.763 kode dari PDF part 1-4 dimuat ke tabel `bmkg_areas`. Default demo: Kelurahan Salatiga `33.73.01.1003` |
 | Vision pipeline (Pilar 2) | `apps/api/app/vision/{crop_packs,image_guard,inference,advisory,severity}.py` | Image guard (kualitas + penolakan non-daun; rule tekstur entropy ≥3,0) → inferensi ONNX di CPU → severity + advisory dwibahasa ID/EN |
-| Model pack padi | `apps/api/crop_packs/rice/` (`model.onnx`) | MobileNetV3-Large 16,8 MB; 4 kelas: blast, brown_spot, tungro, bacterial_leaf_blight |
+| Model pack padi | `apps/api/crop_packs/rice/` (`model.onnx`) | MobileNetV3-Large ~16,8 MB; 5 kelas: bacterial_leaf_blight, blast, brown_spot, healthy, tungro (v0.3) |
 | Fusion risiko | `apps/api/app/fusion/risk.py` + `fusion_rules.json` | Matriks rule penyakit × awd_state (`flooded/shallow_dry/deep_dry/beyond_trigger/flowering_lock`) × wet_weather (rain72 ≥ 15 mm) → `risk_level` + drivers ID/EN + `irrigation_note` |
 | AI Assistant | `apps/api/app/assistant/{agent,tools,prompts,fallback}.py` | DeepSeek Chat Completions (`https://api.deepseek.com`), default `IRIS_LLM_MODEL=deepseek-v4-flash-vision-exp` (experimental vision ID, 21 Aug 2026). Photographs are sent as `image_url` parts; official class from ONNX tool. Max 6 hops, 60 s timeout. |
 | Tool asisten | `apps/api/app/assistant/tools.py` | 6 tools: `get_plot_status`, `get_weather`, `run_vision_triage`, `search_kb`, `get_receipt`, `get_risk_fusion` |
@@ -48,7 +49,7 @@ sequenceDiagram
     N->>API: POST /api/ingest (dist_cm)
     API->>API: level dari pipe zero → protocol.stage_on(day)
     API->>W: prakiraan hujan 72 jam
-    API->>API: scheduler.decide(level, stage, rain72) + cek rain-skip
+    API->>API: scheduler.decide(level, stage, rain72 BMKG) ; LogReg HITL hanya flag UI
     API->>DB: reading + decision (+ irrigation) + receipt IPCC Tier-1
     U->>NX: buka dashboard, unggah foto daun, chat asisten
     NX->>API: rewrite /api/* → :8000
@@ -75,7 +76,10 @@ sequenceDiagram
   yang identik** dengan produksi - tidak ada jalur mock terpisah.
 - **Honesty labels**: receipt karbon selalu membawa salah satu label
   `simulated | measured | projected`; angka eksperimen dilaporkan sebagai
-  `[simulated]` sampai tervalidasi lapangan.
+  `[simulated]` sampai tervalidasi lapangan. Angka literatur (Carrijo,
+  Lampayan, Zhao) adalah agregat lapangan terpisah, bukan petak demo.
+- **Rain HITL**: LogReg persistensi tidak boleh men-skip irigasi; muka air
+  ≥ 0 cm tidak boleh DRAIN di luar panen.
 - **Offline ladder**: LLM online (DeepSeek, tool-calling ≤6 hop, 30 s) → jika
   gagal/tidak ada kunci API → fallback retrieval TF-IDF atas `apps/api/app/kb/*.md`
   plus one-liner status petak, ditandai badge mode offline di UI.

@@ -5,13 +5,14 @@ Universitas Kristen Maranatha). Poster claims, the jury demo, and the A1 PDF
 are taken from this tree. `C:\xampp\htdocs\inovatalk` is an archived Telegram
 and Streamlit MVP; it is not a source of numbers.
 
-IRIS is a single-plot decision record. A water-level reading, a leaf
-photograph, and the assistant all refer to the same plot. Irrigation follows
-IRRI safe AWD (Alternate Wetting and Drying) with a 72-hour rain skip.
-Leaf photographs are classified on-device with MobileNetV3-Large (ONNX).
-Combined risk is a documented rule table (disease class x AWD state x wet
-weather), not a trained fusion model. Season water and CH4 figures on the
-receipt are the E3 backtest, labelled [simulated].
+IRIS is AIoT for one plot that ends in a smart decision a person confirms.
+A water-level reading, a leaf photograph, and a BMKG 72 h forecast land in
+the same record. The agronomy is IRRI safe AWD, not a new protocol. The
+novelty is the closed decision loop (fail-closed rules + human in the loop),
+not a new CNN and not a new IPCC factor. Combined canopy risk is a
+documented rule table (disease class x AWD state x wet weather), not a
+trained fusion model. Season water and CH4 figures on the receipt are the
+E3 backtest, labelled [simulated], shown next to literature aggregates.
 
 ## Architecture
 
@@ -33,9 +34,14 @@ flowchart LR
 
 1. **Water.** Ingest `dist_cm`, map to water table, run the stage machine and
    rain-aware scheduler, store the decision, expose the E3 season receipt
-   (IPCC 2006 Tier-1 CH4, AR6 GWP100 = 27).
-2. **Leaf.** Quality guard, then four-class ONNX triage (blast, brown spot,
-   tungro, bacterial leaf blight). Screening, not a laboratory diagnosis.
+   (IPCC 2006 Tier-1 CH4, AR6 GWP100 = 27). BMKG rain72 may only *hold*
+   irrigation above a hard floor. A persistence logistic regression
+   (`apps/api/app/irrigation/rain_hitl.py`) is a second opinion for human
+   review; it never changes `rain72` that enters `decide()`. If the table is
+   already at or above 0 cm, the action is WAIT ("Do not drain"): AWD dries
+   by evapotranspiration. `DRAIN` is harvest only.
+2. **Leaf.** Quality guard, then five-class ONNX triage (blast, brown spot,
+   tungro, bacterial leaf blight, healthy). Screening, not a laboratory diagnosis.
 3. **Assistant.** DeepSeek Chat Completions (`https://api.deepseek.com`),
    default model `deepseek-v4-flash-vision-exp` (experimental vision ID
    published 21 August 2026). Up to six tool hops. Attached photographs are
@@ -90,8 +96,19 @@ From `experiments/run_all.py` / `experiments/outputs/backtest_summary.json`:
 | Effective SF_w | n/a | 0.8922 | interpolated, stated in IPCC_ACCOUNTING.md |
 
 CO2e uses the unrounded CH4 difference (14.014 kg). Demo rows are badged
-**DEMO**. Leaf output is triage. The ONNX pack is trained on a public Mendeley
-set; field validation is not claimed ([docs/MODEL_CARD.md](docs/MODEL_CARD.md)).
+**DEMO**. Leaf output is triage. The ONNX pack is trained on public Mendeley
+plus Paddy Doctor photos; field validation in Indonesia is not claimed
+([docs/MODEL_CARD.md](docs/MODEL_CARD.md)).
+
+Two impact labels (do not mix):
+
+| Label | Source | Water vs CF | CH4 vs CF |
+| --- | --- | --- | --- |
+| This prototype `[simulated]` | E3 backtest in this repo | −37.5% | −10.8% (0.378 t CO2e) |
+| Literature aggregate `[field meta-analyses]` | Carrijo 2017, Lampayan 2015, Zhao 2024, IPCC 2019 | mild AWD −23.4%; adoption up to −38% | mild AWD −49.4%; overall −51.6%; ≤3 drying events −40.6%. IPCC 2019 SF_w 0.55 is a ~45% *model* cut. |
+
+The larger CH4 cuts need deeper or more frequent drying than this simulation,
+which rarely reaches −15 cm. N2O is omitted from our CO2e (upper bound).
 
 ## Documents
 

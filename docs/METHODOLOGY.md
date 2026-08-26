@@ -88,7 +88,10 @@ wadah aktual saat pelaporan.
 - **Hasil saat ini** (komit `backtest_summary.json`, label `simulated`):
   lihat tabel pada README bagian *Hasil Ringkas* - 23 vs 100 irigasi,
   5 000 vs 8 000 m³ air, sf_w_eff 0.8922, 0.3784 t CO₂e/ha/musim terhindar,
-  penghematan air 37.5 %.
+  penghematan air 37.5 %. Label **This prototype [simulated]**. Agregat
+  literatur (bukan petak ini): air mild AWD −23,4% (Carrijo 2017), adopsi
+  hingga −38% (Lampayan 2015); CH4 mild AWD −49,4% / overall −51,6%
+  (Zhao 2024). Jangan mencampur kedua label.
 
 ### Kebijakan rain-hold scheduler live (`apps/api/app/irrigation/scheduler.py`)
 
@@ -99,7 +102,16 @@ Berlaku pada sistem live (bukan bagian backtest E3 - lihat asumsi di atas):
 - penahanan hanya berlaku selama level masih di atas **pemicu − 10 cm**
   (`hard_floor`); bila level sudah menyentuh floor, irigasi tetap dieksekusi;
 - fase `establishment` dan `flowering_lock` **dikecualikan** dari rain-hold
-  (genangan fase kritis selalu dipertahankan).
+  (genangan fase kritis selalu dipertahankan);
+- **Do not drain:** jika muka air sudah ≥ 0 cm dan masih di atas pemicu
+  (bukan panen), aksi = `WAIT` dengan alasan "Do not drain". Hujan lama
+  tidak memicu pengeringan paksa; AWD menunggu muka air turun sendiri
+  (ET/perkolasi). `DRAIN` hanya pada `harvest`;
+- **LogReg HITL** (`rain_hitl.py`): opini kedua vs BMKG. Tidak mengubah
+  `rain72` scheduler. Flag tinjauan manusia jika prediksi basah/kering
+  berbeda atau P(wet) di pita 0,35–0,65. Bobot di `rain_logreg.json`
+  (Open-Meteo Salatiga; akurasi latih ~0,59, base rate ~0,50). Bukan
+  pengganti BMKG dan bukan pengukur lapangan.
 
 Deviasi flowering-lock vs panduan IRRI RKB: pemicu +3 cm dengan refill ke
 +5 cm menjaga pita ±3–5 cm, sedikit lebih longgar dari panduan IRRI RKB
@@ -108,18 +120,19 @@ fase kritis namun tetap praktis.
 
 ## E4 - Evaluasi model AI-Vision (`public-dataset`)
 
-- **Pertanyaan:** seberapa andal klasifikasi 4 kelas penyakit daun padi
-  (blast, bercak cokelat, tungro, hawar daun bakteri) pada model ONNX yang
-  dipakai produksi?
+- **Pertanyaan:** seberapa andal klasifikasi 5 kelas daun padi (blast, bercak
+  cokelat, tungro, hawar daun bakteri, sehat) pada model ONNX yang dipakai
+  produksi?
 - **Metrik:** macro-F1, akurasi per kelas, dan confusion matrix pada
   *held-out test split*; dilaporkan bersama keterbatasan data.
-- **Status:** pelatihan memakai dataset publik Mendeley (`[public-dataset]`);
-  evaluasi held-out sedang berlangsung - angka akurasi belum diterbitkan sampai
-  split bersih selesai diuji (skor validasi ~1,00 pada data publik dicatat
-  sebagai red flag kebocoran data, bukan performa). Validasi lapangan dengan
-  daun asli Indonesia menyusul bersama mitra agronomi.
-- **Protokol evaluasi:** test split terpisah dari train/val tanpa augmentasi
-  silang; laporan di `docs/MODEL_CARD.md`; guard kualitas gambar (penolakan
-  non-daun) diuji terpisah pada suite `apps/api/tests`.
+- **Status:** v0.3 dilatih di RTX 3060 pada Mendeley yang di-deduplikasi MD5
+  plus foto lapangan Paddy Doctor (`[public-dataset]`). Tes held-out: akurasi
+  0,9784, macro-F1 0,9783 (1.621 citra). Skor validasi 1,00 pada v0.2 dicatat
+  sebagai kebocoran split, bukan patokan. Validasi lapangan dengan daun
+  Indonesia menyusul bersama mitra agronomi.
+- **Protokol evaluasi:** unik per MD5 sebelum split 70/15/15; preprocess
+  latihan = serving (`Resize` sisi pendek 256 + `CenterCrop` 224); laporan di
+  `docs/MODEL_CARD.md`; guard kualitas gambar diuji terpisah pada suite
+  `apps/api/tests`.
 - **Output:** tabel metrik + model card di `docs/MODEL_CARD.md`,
   label `public-dataset` sampai validasi lapangan tersedia.

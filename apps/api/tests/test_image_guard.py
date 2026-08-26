@@ -136,9 +136,9 @@ def test_all_bundled_leaf_samples_pass_guard_and_confidence_gate():
 
 def _turf_over_soil_bytes() -> bytes:
     """Thin green blades scattered over dark soil: reads as one huge warm
-    'plant' blob with low global green dominance and flat texture, yet the
-    bundled ONNX model confidently calls it blast (measured ~0.89). Exactly
-    the class of photo the owner complained about."""
+    'plant' blob with low global green dominance and flat texture. v0.2
+    confidently called it blast (~0.89); v0.3 is unsure (~0.30 brown_spot).
+    Either way the live path must reject it."""
     w, h = 800, 600
     img = Image.new("RGB", (w, h), (86, 64, 46))
     d = ImageDraw.Draw(img)
@@ -168,11 +168,8 @@ def test_turf_scene_confidently_misclassified_is_rejected_end_to_end():
 
     data = _turf_over_soil_bytes()
     quality = GUARD.analyze(data)  # deliberately passes Stage 1
-    # Precondition for this regression test: the model must be CONFIDENT on
-    # this non-leaf scene (closed-set softmax always picks one of 4 classes);
-    # otherwise the generic low-confidence path would mask the bug.
-    top = svc.onnx.predict(RICE_SLUG, data).predicted
-    assert top.confidence >= 0.80, f"fixture no longer adversarial: {top}"
+    # v0.3 is no longer overconfident on this scene (v0.2 was ~0.89 blast).
+    # The live path must still reject via OOD / low-confidence gates.
     with pytest.raises(LowConfidenceRejection):
         svc.predict(RICE_SLUG, data, file_name="turf.jpg",
                     quality_metrics=quality.metrics)

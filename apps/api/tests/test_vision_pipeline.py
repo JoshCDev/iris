@@ -9,7 +9,9 @@ from app.vision.inference import (InferenceCandidate, InferenceResult,
                                   InferenceService)
 from app.vision.severity import calculate_severity, severity_label
 
-MODEL_CLASSES = {"bacterial_leaf_blight", "blast", "brown_spot", "tungro"}
+MODEL_CLASSES = {
+    "bacterial_leaf_blight", "blast", "brown_spot", "healthy", "tungro",
+}
 FIXTURE = __file__.replace("\\", "/").rsplit("/", 1)[0] + "/fixtures/rice_leaf.jpg"
 
 

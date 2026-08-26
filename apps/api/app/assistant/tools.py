@@ -86,7 +86,7 @@ TOOLS: list[dict[str, Any]] = [
     }},
     {"type": "function", "function": {
         "name": "get_weather",
-        "description": "72-hour rain forecast (mm) from BMKG for this plot.",
+        "description": "72-hour BMKG rain forecast plus a persistence LogReg second opinion (HITL flag if they disagree). Scheduler still uses BMKG only.",
         "parameters": {"type": "object", "properties": {}, "required": []},
     }},
     {"type": "function", "function": {
@@ -115,8 +115,9 @@ TOOLS: list[dict[str, Any]] = [
         "name": "get_receipt",
         "description": (
             "Season green receipt from E3 backtest (100 days, 1 ha): "
-            "37.5% water saved, IPCC Tier-1 CH4 and CO2e, simulated label. "
-            "Not the 30-day demo-plot window."),
+            "37.5% water saved, IPCC Tier-1 CH4 and CO2e, label [simulated]. "
+            "Not the 30-day demo-plot window. Literature meta-analyses "
+            "(larger CH4 cuts) are a separate aggregate, not this plot."),
         "parameters": {"type": "object", "properties": {
             "plot_id": {"type": "integer",
                         "description": "Plot ID"},
@@ -204,9 +205,11 @@ def get_weather() -> dict[str, Any]:
         adm4 = None
     try:
         rain = fetch_forecast_72h_rain(adm4=adm4)
-        return {"rain72_mm": round(float(rain), 1), "stale": False}
+        from app.irrigation.rain_hitl import weather_payload
+        return weather_payload(round(float(rain), 1), False)
     except Exception:
-        return {"rain72_mm": 0.0, "stale": True}
+        from app.irrigation.rain_hitl import weather_payload
+        return weather_payload(0.0, True)
 
 
 def run_vision_triage(image_ref: str) -> dict[str, Any]:

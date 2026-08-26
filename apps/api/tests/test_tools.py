@@ -64,8 +64,12 @@ def test_get_weather_ok(monkeypatch, seeded_db):
     from app.irrigation import weather_bmkg as w
 
     monkeypatch.setattr(w, "fetch_forecast_72h_rain", lambda *a, **k: 17.5)
+    monkeypatch.setattr("app.irrigation.rain_hitl.fetch_recent_precip",
+                        lambda *a, **k: (0.0, 0.0, "doy_only"))
     out = tools.get_weather()
-    assert out == {"rain72_mm": 17.5, "stale": False}
+    assert out["rain72_mm"] == 17.5
+    assert out["stale"] is False
+    assert "hitl" in out
 
 
 def test_get_weather_fail_open(monkeypatch, seeded_db):
@@ -75,8 +79,12 @@ def test_get_weather_fail_open(monkeypatch, seeded_db):
         raise RuntimeError("offline")
 
     monkeypatch.setattr(w, "fetch_forecast_72h_rain", boom)
+    monkeypatch.setattr("app.irrigation.rain_hitl.fetch_recent_precip",
+                        lambda *a, **k: (0.0, 0.0, "doy_only"))
     out = tools.get_weather()
-    assert out == {"rain72_mm": 0.0, "stale": True}
+    assert out["rain72_mm"] == 0.0
+    assert out["stale"] is True
+    assert "hitl" in out
 
 
 # --- search_kb ---------------------------------------------------------------

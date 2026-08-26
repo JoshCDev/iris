@@ -4,8 +4,9 @@ from app.irrigation.scheduler import decide
 
 
 def test_wait_when_above_trigger():
-    d = decide(0.0, Stage.VEG_AWD, 0.0)
+    d = decide(-5.0, Stage.VEG_AWD, 0.0)
     assert d.action == "WAIT"
+    assert "Do not drain" not in d.reason_id
 
 
 def test_irrigate_below_trigger_no_rain():
@@ -51,6 +52,19 @@ def test_flowering_lock_forces_flood():
     d = decide(2.0, Stage.FLOWERING_LOCK, 0.0)
     assert d.action == "IRRIGATE"
     assert "flowering" in d.reason_id.lower()
+
+
+def test_wait_when_already_wet_despite_heavy_rain():
+    """Prolonged rain must not drain a wet vegetative field; AWD dries by ET."""
+    d = decide(5.0, Stage.VEG_AWD, 200.0)
+    assert d.action == "WAIT"
+    assert "Do not drain" in d.reason_id
+
+
+def test_wait_when_ponded_at_zero_despite_rain():
+    d = decide(0.0, Stage.VEG_AWD, 80.0)
+    assert d.action == "WAIT"
+    assert "Do not drain" in d.reason_id
 
 
 def test_harvest_drain():

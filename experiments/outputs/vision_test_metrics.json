@@ -1,66 +1,84 @@
 {
   "evaluated_at": "2026-08-26",
-  "dataset": "public Mendeley rice-disease dataset, prepared test split (data/processed/rice/test; split created by the original training pipeline, no augmentation on test)",
-  "model": "MobileNetV3-Large ONNX (production crop_packs/rice/model.onnx)",
-  "n_images": 893,
-  "overall_accuracy": 1.0,
-  "macro_f1": 1.0,
-  "mean_confidence_when_correct": 0.9987,
-  "avg_latency_ms_cpu": 4.3,
+  "dataset": "rice_v03 held-out test split (MD5-deduped Mendeley + Paddy Doctor; experiments/data/rice_v03/test; no test augmentation)",
+  "model": "MobileNetV3-Large ONNX v0.3 (crop_packs/rice/model.onnx)",
+  "n_images": 1621,
+  "overall_accuracy": 0.9784,
+  "macro_f1": 0.9783,
+  "mean_confidence_when_correct": 0.8721,
+  "avg_latency_ms_cpu": 4.6,
   "per_class": {
     "bacterial_leaf_blight": {
-      "support": 239,
-      "correct": 239,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0
+      "support": 271,
+      "correct": 265,
+      "precision": 0.9815,
+      "recall": 0.9779,
+      "f1": 0.9797
     },
     "blast": {
-      "support": 217,
-      "correct": 217,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0
+      "support": 404,
+      "correct": 394,
+      "precision": 0.9825,
+      "recall": 0.9752,
+      "f1": 0.9789
     },
     "brown_spot": {
-      "support": 240,
-      "correct": 240,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0
+      "support": 324,
+      "correct": 312,
+      "precision": 0.9968,
+      "recall": 0.963,
+      "f1": 0.9796
+    },
+    "healthy": {
+      "support": 263,
+      "correct": 261,
+      "precision": 0.956,
+      "recall": 0.9924,
+      "f1": 0.9739
     },
     "tungro": {
-      "support": 197,
-      "correct": 197,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0
+      "support": 359,
+      "correct": 354,
+      "precision": 0.9725,
+      "recall": 0.9861,
+      "f1": 0.9793
     }
   },
   "confusion_matrix_rows_true_cols_pred": {
     "bacterial_leaf_blight": [
-      239,
-      0,
-      0,
-      0
+      265,
+      3,
+      1,
+      1,
+      1
     ],
     "blast": [
+      1,
+      394,
       0,
-      217,
-      0,
-      0
+      5,
+      4
     ],
     "brown_spot": [
+      3,
+      2,
+      312,
+      3,
+      4
+    ],
+    "healthy": [
       0,
+      1,
       0,
-      240,
-      0
+      261,
+      1
     ],
     "tungro": [
+      1,
+      1,
       0,
-      0,
-      0,
-      197
+      3,
+      354
     ]
   },
   "provenance_caveat": "Test images originate from the same public dataset used for training (pipeline-separated split). Independent field validation with Indonesian leaves is the next milestone."

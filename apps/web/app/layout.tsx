@@ -23,7 +23,7 @@ const serif = Source_Serif_4({
 export const metadata: Metadata = {
   title: "IRIS | plot record",
   description:
-    "Rain-aware AWD, ONNX leaf triage, and a tool-grounded assistant on one rice plot.",
+    "AIoT on one rice plot ending in a smart decision: rain-aware AWD, ONNX leaf triage, and a tool-grounded assistant.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

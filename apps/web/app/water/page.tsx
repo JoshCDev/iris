@@ -15,8 +15,12 @@ export default function WaterPage() {
             <p className="section-kicker">This plot · water</p>
             <h1 className="page-title">Today&apos;s water action</h1>
             <p className="section-copy" style={{ marginTop: 12 }}>
-              Irrigation uses the AWD pipe, crop stage, and 72-hour rain forecast.
-              Leaf class and the assistant read the same decision record.
+              This is a recommendation. Confirm before irrigating; IRIS does
+              not start a pump. The AWD pipe is the safety constraint. The
+              72-hour BMKG forecast may only hold irrigation above a hard
+              floor. A persistence LogReg flags disagreement for human review
+              and never skips irrigation by itself. If rain keeps the table
+              at or above 0 cm, the action is WAIT: do not drain.
             </p>
           </div>
         </div>

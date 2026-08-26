@@ -19,6 +19,14 @@ def decide(level_cm: float, stage: Stage, rain72_mm: float) -> Decision:
         return Decision("DRAIN",
                         "Season complete: the field can be drained for harvest.")
     if level_cm > trig:
+        if stage != Stage.HARVEST and level_cm >= 0.0:
+            return Decision(
+                "WAIT",
+                "Do not drain. The water table is above the AWD band "
+                f"({level_cm:+.1f} cm; trigger {trig:+.1f} cm). "
+                "Safe AWD waits for the table to fall by itself; "
+                "pumping out is not the protocol. Check again in 15 minutes.",
+            )
         return Decision("WAIT",
                         f"Safe ({level_cm:+.1f} cm; trigger {trig:+.1f} cm). "
                         "Check again in 15 minutes.")

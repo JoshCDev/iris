@@ -15,7 +15,9 @@ import app.main as main_mod
 PINNED_VISION_KEYS = {"report_id", "top_class", "class_label_id",
                       "class_label_en", "confidence", "severity",
                       "advisory_id", "advisory_en", "fusion", "is_demo"}
-MODEL_CLASSES = {"blast", "brown_spot", "tungro", "bacterial_leaf_blight"}
+MODEL_CLASSES = {
+    "blast", "brown_spot", "tungro", "bacterial_leaf_blight", "healthy",
+}
 FIXTURE = __file__.replace("\\", "/").rsplit("/", 1)[0] + "/fixtures/rice_leaf.jpg"
 
 
@@ -196,7 +198,7 @@ def test_flooded_healthy_maps_to_none_low(client, monkeypatch):
 
 # --- real-model smoke (spec §9) ----------------------------------------------
 
-def test_real_model_smoke_fixture_class_in_four_diseases(client):
+def test_real_model_smoke_fixture_class_in_model_classes(client):
     with open(FIXTURE, "rb") as fh:
         r = client.post("/api/vision/predict",
                         files={"image": ("rice_leaf.jpg", fh, "image/jpeg")})

@@ -102,9 +102,22 @@ export interface VisionReportsResponse {
   reports: VisionReportRow[];
 }
 
+export interface RainHitl {
+  bmkg_rain72_mm: number;
+  bmkg_wet: boolean;
+  logreg_p_wet: number;
+  logreg_wet: boolean;
+  needs_review: boolean;
+  recent_1d_mm: number;
+  recent_3d_mm: number;
+  source: string;
+  note: string;
+}
+
 export interface WeatherForecast {
   rain72_mm: number;
   stale: boolean;
+  hitl?: RainHitl;
 }
 
 export type ChatRole = "user" | "assistant";

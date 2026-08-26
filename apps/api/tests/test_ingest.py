@@ -199,9 +199,15 @@ def test_weather_fail_open_on_error(client, monkeypatch):
     def boom(*args, **kwargs):
         raise RuntimeError("offline")
     monkeypatch.setattr(main_mod, "fetch_forecast_72h_rain", boom)
+    monkeypatch.setattr("app.irrigation.rain_hitl.fetch_recent_precip",
+                        lambda *a, **k: (0.0, 0.0, "doy_only"))
     r = client.get("/api/weather/forecast")
     assert r.status_code == 200
-    assert r.json() == {"rain72_mm": 0.0, "stale": True}
+    body = r.json()
+    assert body["rain72_mm"] == 0.0
+    assert body["stale"] is True
+    assert "hitl" in body
+    assert "needs_review" in body["hitl"]
 
 
 def test_weather_caches_for_15_minutes(client, monkeypatch):
@@ -211,10 +217,14 @@ def test_weather_caches_for_15_minutes(client, monkeypatch):
         calls["n"] += 1
         return 17.5
     monkeypatch.setattr(main_mod, "fetch_forecast_72h_rain", fake)
+    monkeypatch.setattr("app.irrigation.rain_hitl.fetch_recent_precip",
+                        lambda *a, **k: (0.0, 0.0, "doy_only"))
     r1 = client.get("/api/weather/forecast")
     r2 = client.get("/api/weather/forecast")
-    assert r1.json() == {"rain72_mm": 17.5, "stale": False}
-    assert r2.json() == {"rain72_mm": 17.5, "stale": False}
+    assert r1.json()["rain72_mm"] == 17.5
+    assert r1.json()["stale"] is False
+    assert "hitl" in r1.json()
+    assert r2.json()["rain72_mm"] == 17.5
     assert calls["n"] == 1
 
 

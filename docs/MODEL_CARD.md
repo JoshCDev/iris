@@ -2,21 +2,22 @@
 
 | Field | Value |
 | --- | --- |
-| Model version | `rice-mobilenet-v3-large-v0.2.0-onnx` (`apps/api/crop_packs/rice/metadata.json`) |
-| Architecture | MobileNetV3-Large (classifier head exported to ONNX) |
+| Model version | `rice-mobilenet-v3-large-v0.3.0-onnx` (`apps/api/crop_packs/rice/metadata.json`) |
+| Architecture | MobileNetV3-Large (last 8 feature blocks + classifier trained; exported to ONNX) |
 | Runtime | onnxruntime CPU (`CPUExecutionProvider`), single session, graph optimizations enabled |
-| Input | 224×224×3 RGB, batch 1 |
-| Output classes (4) | `bacterial_leaf_blight`, `blast`, `brown_spot`, `tungro` |
+| Input | 224×224×3 RGB, batch 1, ImageNet normalize after Resize(shorter-side 256) + CenterCrop(224) |
+| Output classes (5) | `bacterial_leaf_blight`, `blast`, `brown_spot`, `healthy`, `tungro` |
 | Serving stack | image guard → ONNX triage → severity → bilingual advisory → risk-fusion hook |
-| Location | `apps/api/crop_packs/rice/model.onnx` |
+| Location | `apps/api/crop_packs/rice/model.onnx` (~16.8 MB) |
 
 ## Intended use
 
 **AI-assisted triage of rice leaf photos** - a prioritization and awareness aid
 for farmers/extension workers: which of the four major rice diseases the lesion
-pattern most resembles, how urgent review is, and what field check to do next.
-It runs on-device-class CPU hardware as part of the IRIS web app
-(`POST /api/vision/predict`) and feeds the assistant's `run_vision_triage` tool.
+pattern most resembles (or whether the leaf looks healthy), how urgent review is,
+and what field check to do next. It runs on-device-class CPU hardware as part of
+the IRIS web app (`POST /api/vision/predict`) and feeds the assistant's
+`run_vision_triage` tool.
 
 ## Out-of-scope / not a diagnosis
 
@@ -30,51 +31,66 @@ It runs on-device-class CPU hardware as part of the IRIS web app
 
 ## Training data provenance (public datasets)
 
-- **Source:** "Rice Leaf Disease Image Samples" - Mendeley Data,
-  <https://data.mendeley.com/datasets/fwcj7stb8r/1> (public dataset; no field
-  data from our own trials).
-- **Splits** (from `crop_packs/rice/training_metrics.json`, identical copy at
-  `C:\xampp\htdocs\phytosignal\models\rice\metrics.json`):
+- **Mendeley** "Rice Leaf Disease Image Samples"
+  <https://data.mendeley.com/datasets/fwcj7stb8r/1> - four disease classes,
+  deduplicated by file MD5 before split (the v0.2 split leaked 243/893 test
+  files as exact copies of train).
+- **Paddy Doctor** (Hugging Face `Project-AgML/paddy_disease_classification`) -
+  field photos; class `normal` mapped to `healthy`. Not Indonesian fields.
+- **Splits** (unique images, 70/15/15, seed 42; `crop_packs/rice/training_metrics.json`):
 
 | Class | Train | Val | Test |
 | --- | --- | --- | --- |
-| bacterial_leaf_blight | 1108 | 237 | 239 |
-| blast | 1007 | 216 | 217 |
-| brown_spot | 1120 | 240 | 240 |
-| tungro | 915 | 196 | 197 |
-| **Total** | **4150** | **889** | **893** |
+| bacterial_leaf_blight | 1257 | 269 | 271 |
+| blast | 1881 | 403 | 404 |
+| brown_spot | 1507 | 322 | 324 |
+| healthy | 1224 | 262 | 263 |
+| tungro | 1671 | 358 | 359 |
+| **Total** | **7540** | **1614** | **1621** |
 
-- Best epoch recorded: 5 (`training_metrics.json`).
+- Best epoch recorded: 24 (`training_metrics.json`). Device: CUDA (RTX 3060).
 
 ## Evaluation status - honesty first
 
-- **Test-split metrics:** **held-out evaluation in progress.** The metrics
-  files record split counts for the test set but no completed test-split
-  accuracy/F1 yet. We will publish per-class + macro-F1 on the held-out test
-  split when the evaluation run finishes - and nothing better than that number.
-- **We deliberately do NOT quote 100%.** `best_val_accuracy = 1.00`,
-  `best_macro_f1 = 1.00` on this public dataset is a classic leakage/
-  near-duplicate red flag (near-identical images across splits), not evidence
-  of field performance. We disclose it rather than print it.
-- For context only, the shipped v0.2.0 checkpoint's earlier training note in
-  `metadata.json` records validation accuracy 0.9055 / macro-F1 0.9036 on the
-  same data regime - also validation-only, not a field claim.
+Held-out **test** metrics from the PyTorch checkpoint (same recipe as serving):
 
-## Preprocessing (must match training parity)
+| Metric | Value |
+| --- | --- |
+| Accuracy | **0.9784** |
+| Macro-F1 | **0.9783** |
+| n | 1621 unique images |
 
-Implemented verbatim in `app/vision/inference.py::OnnxInferenceAdapter._run_session`:
+Per-class recall on that test split:
+
+| Class | Support | Correct | Recall |
+| --- | --- | --- | --- |
+| bacterial_leaf_blight | 271 | 265 | 0.9779 |
+| blast | 404 | 394 | 0.9752 |
+| brown_spot | 324 | 312 | 0.9630 |
+| healthy | 263 | 261 | 0.9924 |
+| tungro | 359 | 354 | 0.9861 |
+
+v0.2 quoted 100% val/test because exact duplicates crossed splits and the
+backbone was frozen. That number is **not** comparable. v0.3 is still a
+public-dataset result: it is not Indonesian field certification.
+
+## Preprocessing (must match training)
+
+Implemented in `app/vision/preprocess.py` and used by
+`OnnxInferenceAdapter._run_session`:
 
 1. Decode bytes → PIL → **RGB**
-2. Plain resize to **224×224** (no center-crop)
-3. Scale to `[0,1]` (`/255`)
-4. Normalize with **ImageNet mean/std** (mean 0.485/0.456/0.406, std 0.229/0.224/0.225)
-5. CHW transpose + batch dim of 1 → softmax over 4 logits
+2. Resize shorter side to **256** (keep aspect)
+3. **Center crop** to **224×224**
+4. Scale to `[0,1]` (`/255`)
+5. Normalize with **ImageNet mean/std** (mean 0.485/0.456/0.406, std 0.229/0.224/0.225)
+6. CHW transpose + batch dim of 1 → softmax over **5** logits
 
 Confidence gating adds an OOD layer on top: low-confidence rejections,
-logit-spread and softmax-entropy uniformity checks (max entropy 2.0 bits for
-4 classes) combined with guard heuristics (plant-like ratio, green dominance,
-blob coherence). Healthy-leaf synthesis exists for clean leaves because the
-dataset contains no healthy class.
+logit-spread and softmax-entropy uniformity checks (max entropy log2(5) ≈ 2.32
+bits) combined with guard heuristics (plant-like ratio, green dominance,
+blob coherence). Healthy is a **model class** in v0.3; the old heuristic
+synthesis only runs if a pack has no `healthy` output.
 
 ## Integration notes
 
@@ -91,18 +107,21 @@ dataset contains no healthy class.
   joins AWD hydrology state (level band / flowering lock) and wet-weather flag
   in `app/fusion/risk.py::assess()` → `{risk_level, drivers_id[], drivers_en[],
   irrigation_note?}` shown as the UI fusion banner and persisted in
-  `vision_reports.fusion_json`.
+  `vision_reports.fusion_json`. Predicted `healthy` is mapped to disease=`none`
+  for fusion.
 - **Assistant tool:** `run_vision_triage(image_ref)` wraps the same services;
   without the vision module it answers honestly: *"vision belum siap"*.
 
 ## Limitations
 
-1. **Public-data domain gap.** Trained only on the Mendeley sample set; lighting,
-   variety, growth stage, and camera behavior in Indonesian fields differ.
-   Field validation pending (next milestone with an agri partner).
-2. **Leakage caveat on perfect val scores** - see Evaluation status above.
-3. **No healthy class in the source dataset**; "healthy" outputs are heuristic
-   syntheses, clearly gated.
+1. **Public-data domain gap.** Mendeley studio crops plus Paddy Doctor photos
+   from India; lighting, variety, growth stage, and camera behavior in
+   Indonesian fields differ. Field validation pending (next milestone with an
+   agri partner).
+2. **Healthy class is not local.** It comes from Paddy Doctor `normal`, not
+   from Indonesian healthy-leaf collection.
+3. **Near-duplicates may remain.** Exact MD5 copies were removed before split;
+   similar JPEGs of the same leaf can still leak a little skill.
 4. **Symptom overlap:** brown spot vs nutrient deficiency vs blast lesions can
    be visually confusable; the model reports resemblance, not causation.
 5. **Single-leaf close-ups only** by design (guard rejects lawns/scenes);

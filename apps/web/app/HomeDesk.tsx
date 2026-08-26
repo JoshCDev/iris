@@ -20,8 +20,8 @@ export function HomeDesk() {
             <h1>{status ? verb : "Plot record"}</h1>
             <p className="lede">
               {status
-                ? `${status.name}. Water decisions, leaf photographs, and the assistant use this plot's readings.`
-                : "Water level, leaf photograph, and assistant share one plot record."}
+                ? `${status.name}. AIoT on this plot ends in a smart decision you confirm: water, leaf, and assistant share the same readings. IRIS does not start a pump.`
+                : "AIoT sensing on one plot, ending in a smart decision the farmer confirms."}
             </p>
             <div className="hero__actions">
               <Link href="/water" className="button button--primary">
@@ -47,7 +47,7 @@ export function HomeDesk() {
       <section className="section section--compact">
         <div className="page-shell">
           <p className="loop-caption">
-            Water, leaf, and assistant for this plot.
+            The novelty is the closed decision at the end of the loop, not a new AWD protocol.
           </p>
           <HomeFacets askHref={status ? askWhyHref(status.action) : "/assistant"} leafHref={askLeafHref(leaf?.top_class)} />
         </div>

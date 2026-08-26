@@ -295,8 +295,9 @@ export function AssistantClient() {
           </div>
           <div className="chat-disclaimer">
             Answers come from IRIS tools and the knowledge base.
-            No pesticide doses. Photo check is screening, not a diagnosis. Consult an
-            extension officer.
+            No pesticide doses. Photo check is screening, not a diagnosis.
+            Consult an extension officer. Irrigation actions are
+            recommendations; IRIS does not start a pump.
           </div>
         </div>
     </div>

@@ -13,4 +13,11 @@ because AWD adds aerobic (not flooded) days. Why irrigate now? Why is
 irrigation on hold? When does this plot need irrigation? Why does methane
 drop?
 
-Aliases: dasar, irigasi, sawah, diairi, menghemat, metana, pembungaan, digenangi.
+If rain keeps the field ponded (water table at or above 0 cm), IRIS does
+not recommend pumping the field dry. The action is WAIT: “Do not drain.”
+Safe AWD dries by waiting for evapotranspiration, not by draining. DRAIN
+is harvest only. A persistence rain model may flag the BMKG forecast for
+human review; it never skips irrigation by itself.
+
+Aliases: dasar, irigasi, sawah, diairi, menghemat, metana, pembungaan, digenangi,
+drain, hujan, HITL.

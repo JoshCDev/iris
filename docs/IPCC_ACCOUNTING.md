@@ -145,3 +145,17 @@ hitung-ulang dari angka tampil 14.01 kg menghasilkan 0.3783 t.
 
 Tes terkait: `apps/api/tests/test_ipcc.py`, `apps/api/tests/test_receipts.py`,
 `apps/api/tests/test_backtest.py` (pin angka E3).
+
+## Dua label impact (jangan dicampur)
+
+Angka E3 di atas adalah **This prototype [simulated]** (air −37,5%, CH4
+−10,8%, 0,378 t CO₂e). Itu bukan mean lapangan. Agregat literatur
+(uji multi-lokasi, bukan petak Salatiga):
+
+- Air: mild/safe AWD −23,4% tanpa turun hasil bermakna (Carrijo et al. 2017);
+  adopsi di Asia hingga −38% (Lampayan et al. 2015).
+- CH4: overall −51,6%; mild AWD −49,4%; ≤3 peristiwa pengeringan −40,6%;
+  N2O +44,0% (Zhao et al. 2024). SF_w 2019 = 0,55 adalah potongan *model*
+  ~45% vs SF_w 1,00, bukan rata-rata lapangan.
+
+Receipt IRIS mengabaikan N2O, jadi CO₂e adalah batas atas manfaat.

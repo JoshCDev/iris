@@ -119,6 +119,9 @@ export function WaterClient() {
       <div className="grid grid--2" style={{ alignItems: "stretch" }}>
         <div className="card card--strong" style={{ display: "grid", gap: 12 }}>
           <h3>Next action</h3>
+          <p className="small muted" style={{ margin: 0 }}>
+            Human in the loop. Recommendation only.
+          </p>
           {status ? (
             <>
               <div className={`next-action__verb next-action__verb--${actionMeta(status.action).tone}`}>
@@ -165,13 +168,28 @@ export function WaterClient() {
           <div className="rain-strip">
             <Icon name="cloud-rain" size={24} aria-hidden="true" />
             <strong>{fmtNum(status?.rain72_mm ?? weather?.rain72_mm)} mm</strong>
-            <span>72-hour rain total · BMKG</span>
+            <span>72-hour rain total · BMKG · supporting only</span>
             {weather && (
               <span className={`status-pill${weather.stale ? " status-pill--alert" : ""}`}>
                 {weather.stale ? "using stored forecast" : "fresh forecast"}
               </span>
             )}
           </div>
+          {weather?.hitl && (
+            <p className="small muted" style={{ margin: 0, lineHeight: 1.5 }}>
+              Persistence LogReg second opinion: P(wet){" "}
+              {fmtNum(weather.hitl.logreg_p_wet * 100)}%
+              {weather.hitl.logreg_wet ? " (wet)" : " (dry)"}. Scheduler still
+              uses BMKG only.
+            </p>
+          )}
+          {weather?.hitl?.needs_review && (
+            <div className="callout callout--warning">
+              <strong>Human review (rain).</strong> {weather.hitl.note}{" "}
+              Persistence LogReg P(wet) {fmtNum(weather.hitl.logreg_p_wet * 100)}%.
+              BMKG does not skip irrigation by itself if the pipe is already dry.
+            </div>
+          )}
           <div className="card">
             <h3>Growth-stage timeline</h3>
             <p className="small muted" style={{ marginTop: 8 }}>

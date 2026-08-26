@@ -1,15 +1,15 @@
 """Held-out test-split evaluation for the IRIS rice vision model.
 
 Runs the production ONNX model (apps/api/crop_packs/rice/model.onnx) over the
-prepared test split (phytosignal data/processed/rice/test, 893 images) using
-the EXACT preprocessing parity of app/vision/inference.py:
-RGB -> resize(224,224) -> /255 -> ImageNet mean/std -> CHW -> batch 1.
+prepared rice_v03 test split using the EXACT preprocessing of
+app/vision/preprocess.py (Resize shorter-side 256 + CenterCrop 224).
 
 Writes experiments/outputs/vision_test_metrics.json and prints a summary.
 """
 from __future__ import annotations
 
 import json
+import sys
 import time
 from collections import Counter
 from pathlib import Path
@@ -18,20 +18,18 @@ import numpy as np
 import onnxruntime as ort
 from PIL import Image
 
-TEST_ROOT = Path(r"C:\xampp\htdocs\phytosignal\data\processed\rice\test")
+API_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(API_DIR))
+from app.vision.preprocess import pil_to_nchw
+
+TEST_ROOT = Path(r"C:\xampp\htdocs\iris-platform\experiments\data\rice_v03\test")
 MODEL = Path(r"C:\xampp\htdocs\iris-platform\apps\api\crop_packs\rice\model.onnx")
 CLASSES_PATH = Path(r"C:\xampp\htdocs\iris-platform\apps\api\crop_packs\rice\model_classes.json")
 OUT = Path(r"C:\xampp\htdocs\iris-platform\experiments\outputs\vision_test_metrics.json")
 
-MEAN = np.asarray([0.485, 0.456, 0.406], dtype="float32")
-STD = np.asarray([0.229, 0.224, 0.225], dtype="float32")
 
-
-def preprocess(path: Path) -> np.ndarray:
-    img = Image.open(path).convert("RGB").resize((224, 224))
-    arr = np.asarray(img).astype("float32") / 255.0
-    arr = (arr - MEAN) / STD
-    return np.transpose(arr, (2, 0, 1))[None, :, :, :]
+def preprocess(path: Path):
+    return pil_to_nchw(Image.open(path).convert("RGB"))
 
 
 def main() -> None:
@@ -96,10 +94,10 @@ def main() -> None:
 
     result = {
         "evaluated_at": time.strftime("%Y-%m-%d"),
-        "dataset": "public Mendeley rice-disease dataset, prepared test split "
-                   "(data/processed/rice/test; split created by the original "
-                   "training pipeline, no augmentation on test)",
-        "model": "MobileNetV3-Large ONNX (production crop_packs/rice/model.onnx)",
+        "dataset": "rice_v03 held-out test split (MD5-deduped Mendeley + "
+                   "Paddy Doctor; experiments/data/rice_v03/test; no test "
+                   "augmentation)",
+        "model": "MobileNetV3-Large ONNX v0.3 (crop_packs/rice/model.onnx)",
         "n_images": n,
         "overall_accuracy": round(accuracy, 4),
         "macro_f1": round(macro_f1, 4),

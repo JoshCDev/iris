@@ -54,6 +54,26 @@ export function ReceiptCard({ receipt }: { receipt: GreenReceipt }) {
         <summary>Full receipt text (IPCC Tier-1)</summary>
         <pre>{receipt.text}</pre>
       </details>
+      <div className="impact-dual" aria-label="Impact figures with two labels">
+        <div className="impact-dual__col">
+          <p className="impact-dual__kicker">This prototype [simulated]</p>
+          <p className="impact-dual__lead">E3 water-balance on this repo</p>
+          <ul>
+            <li>Water −37.5% (8,000 → 5,000 m³ ha⁻¹)</li>
+            <li>CH₄ −10.8% (0.378 t CO₂e)</li>
+            <li>Not field measurements</li>
+          </ul>
+        </div>
+        <div className="impact-dual__col impact-dual__col--lit">
+          <p className="impact-dual__kicker">Literature aggregate [field]</p>
+          <p className="impact-dual__lead">Multi-site trials, not this plot</p>
+          <ul>
+            <li>Water: mild AWD −23.4% (Carrijo 2017); adoption up to −38% (Lampayan 2015)</li>
+            <li>CH₄: mild AWD −49.4%; overall −51.6%; ≤3 drying events −40.6% (Zhao 2024)</li>
+            <li>Those cuts need deeper drying than this simulation</li>
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }

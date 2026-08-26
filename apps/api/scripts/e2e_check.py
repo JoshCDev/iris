@@ -49,7 +49,9 @@ PINNED_STATUS_KEYS = {"plot_id", "name", "level_cm", "stage", "stage_days",
 PINNED_VISION_KEYS = {"report_id", "top_class", "class_label_id",
                       "class_label_en", "confidence", "severity",
                       "advisory_id", "advisory_en", "fusion", "is_demo"}
-MODEL_CLASSES = {"bacterial_leaf_blight", "blast", "brown_spot", "tungro"}
+MODEL_CLASSES = {
+    "bacterial_leaf_blight", "blast", "brown_spot", "healthy", "tungro",
+}
 GWP_CH4_AR6 = 27.0
 
 _results: list[tuple[str, bool, str]] = []
@@ -237,7 +239,7 @@ def step_vision_predict() -> str:
     body = r.json()
     assert set(body.keys()) == PINNED_VISION_KEYS, "vision shape mismatch"
     assert body["top_class"] in MODEL_CLASSES, \
-        f"top_class {body['top_class']} outside 4 classes"
+        f"top_class {body['top_class']} outside model classes"
     assert 0.0 < body["confidence"] <= 1.0
     fusion = body["fusion"]
     assert fusion is not None, "fusion missing although plot_id was given"

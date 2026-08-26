@@ -6,8 +6,10 @@ export function SiteFooter() {
           <strong>IRIS</strong>
           <p>
             Demonstration build of rain-aware AWD, leaf-photo triage, and a
-            tool-grounded assistant. Leaf output is screening, not a diagnosis.
-            Season water and CH4 figures are labelled [simulated].
+            tool-grounded assistant. Irrigation and leaf outputs are
+            recommendations (human in the loop). Leaf output is screening, not
+            a diagnosis. Season water and CH4 figures are labelled [simulated]
+            and shown next to literature aggregates, not mixed with them.
           </p>
           <small>© 2026 IRIS team · Universitas Kristen Maranatha</small>
         </div>

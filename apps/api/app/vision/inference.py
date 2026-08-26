@@ -121,22 +121,15 @@ class OnnxInferenceAdapter:
     def _run_session(self, crop_slug: str, image_bytes: bytes) -> list[float]:
         import io
 
-        import numpy as np
         from PIL import Image
 
         try:
             image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         except Exception as exc:
             raise ValueError("Image file could not be read by model runtime. Use JPG, PNG, or WebP.") from exc
-        # Preprocessing parity with PhyToSignal (behavior-identical port):
-        # RGB -> plain .resize((224,224)) -> /255 -> ImageNet mean/std ->
-        # CHW transpose -> batch dim of 1.
-        image = image.resize((224, 224))
-        arr = np.asarray(image).astype("float32") / 255.0
-        mean = np.asarray([0.485, 0.456, 0.406], dtype="float32")
-        std = np.asarray([0.229, 0.224, 0.225], dtype="float32")
-        arr = (arr - mean) / std
-        arr = np.transpose(arr, (2, 0, 1))[None, :, :, :]
+        from app.vision.preprocess import pil_to_nchw
+
+        arr = pil_to_nchw(image)
         outputs = self.sessions[crop_slug].run(None, {self.input_names[crop_slug]: arr})
         return outputs[0][0].tolist()
 
@@ -151,7 +144,7 @@ class OnnxInferenceAdapter:
 
     @staticmethod
     def _shannon_entropy(probs: list[float]) -> float:
-        """Shannon entropy of the probability distribution (bits; 4-class max 2.0)."""
+        """Shannon entropy of the probability distribution (bits; 5-class max ~2.32)."""
         import math
 
         return -sum(p * math.log2(max(p, 1e-9)) for p in probs)
@@ -232,7 +225,7 @@ class InferenceService:
 
         # Softmax-entropy OOD guard: near-uniform distribution + weakly leaf-like
         # image is almost certainly an OOD guess (threshold leaves headroom below
-        # log2(4) = 2.0).
+        # log2(5) ~ 2.32).
         entropy_value = result.softmax_entropy
         if entropy_value is not None and entropy_value >= 1.50 and plant_like < 0.45:
             raise LowConfidenceRejection(

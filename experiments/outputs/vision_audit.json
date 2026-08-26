@@ -1,0 +1,326 @@
+{
+  "dataset_root": "C:\\xampp\\htdocs\\phytosignal\\data\\processed\\rice",
+  "dataset_exists": true,
+  "counts": {
+    "bacterial_leaf_blight": {
+      "train": 1108,
+      "val": 237,
+      "test": 239
+    },
+    "blast": {
+      "train": 1007,
+      "val": 216,
+      "test": 217
+    },
+    "brown_spot": {
+      "train": 1120,
+      "val": 240,
+      "test": 240
+    },
+    "tungro": {
+      "train": 915,
+      "val": 196,
+      "test": 197
+    }
+  },
+  "n_unique_file_md5": 4794,
+  "n_files": 5932,
+  "exact_md5_leaking_across_splits": 509,
+  "exact_md5_leak_examples": [
+    {
+      "md5": "8143e27f82078c962060616a7e8e2f1f",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_073-00293.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_087-00216.jpg"
+      ]
+    },
+    {
+      "md5": "0ded4eb4e82e464ce166db269851bc58",
+      "n": 5,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_074-00617.jpg",
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_084-00975.jpg",
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_088-00899.jpg",
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_090-00411.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_086-00145.jpg"
+      ]
+    },
+    {
+      "md5": "68dae1153317752665e9d3f3a1bd945d",
+      "n": 3,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_083-00600.jpg",
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_085-00500.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_168-00149.jpg"
+      ]
+    },
+    {
+      "md5": "72f96be3d159b0e0a5d8f606737929f0",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_089-00796.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_173-00149.jpg"
+      ]
+    },
+    {
+      "md5": "63e88af0c803b85c4bdabbf14be8f610",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_115-00162.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_152-00188.jpg"
+      ]
+    },
+    {
+      "md5": "0e6ba28052e1928bc665e34a021360e0",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_118-00877.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_155-00068.jpg"
+      ]
+    },
+    {
+      "md5": "33f5a653a7863429d1f064183af12357",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_119-00560.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_156-00237.jpg"
+      ]
+    },
+    {
+      "md5": "0e1f83fc0a183a86fb94235089a578f5",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_120-00476.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_157-00172.jpg"
+      ]
+    },
+    {
+      "md5": "5697872f1626a4bbada67d49cdd7102a",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_122-00346.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_159-00198.jpg"
+      ]
+    },
+    {
+      "md5": "ca1fc1cbcb8502a1b5e8639377949a7f",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_123-00479.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_160-00043.jpg"
+      ]
+    },
+    {
+      "md5": "afcbd90d5528a70e35dbe7e1df42c66b",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_127-00228.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_163-00076.jpg"
+      ]
+    },
+    {
+      "md5": "c54ecf87e6de36a2f99fd6313ba14822",
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_158-00237.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_121-00182.jpg"
+      ]
+    }
+  ],
+  "resized64_pixel_leaking_across_splits": 532,
+  "resized64_leak_examples": [
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_001-00188.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_015-00036.jpg"
+      ]
+    },
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_005-00366.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_019-00233.jpg"
+      ]
+    },
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_006-00032.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_020-00070.jpg"
+      ]
+    },
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_014-00169.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_012-00104.jpg"
+      ]
+    },
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_016-01043.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_002-00152.jpg"
+      ]
+    },
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_064-00283.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_066-00132.jpg"
+      ]
+    },
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_073-00293.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_087-00216.jpg"
+      ]
+    },
+    {
+      "n": 5,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_074-00617.jpg",
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_084-00975.jpg",
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_088-00899.jpg",
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_090-00411.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_086-00145.jpg"
+      ]
+    },
+    {
+      "n": 3,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_083-00600.jpg",
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_085-00500.jpg",
+        "test/bacterial_leaf_blight/BACTERAILBLIGHT3_168-00149.jpg"
+      ]
+    },
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_089-00796.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_173-00149.jpg"
+      ]
+    },
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_115-00162.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_152-00188.jpg"
+      ]
+    },
+    {
+      "n": 2,
+      "locs": [
+        "train/bacterial_leaf_blight/BACTERAILBLIGHT3_118-00877.jpg",
+        "val/bacterial_leaf_blight/BACTERAILBLIGHT3_155-00068.jpg"
+      ]
+    }
+  ],
+  "sampled_unique_resolutions": [
+    {
+      "w": 300,
+      "h": 300
+    }
+  ],
+  "sampled_square_share": 1.0,
+  "test_subset_stretch_224": {
+    "n": 320,
+    "accuracy": 1.0,
+    "seconds": 2.5,
+    "confusion": [
+      [
+        80,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        80,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        80,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        80
+      ]
+    ]
+  },
+  "test_subset_resize256_centercrop224": {
+    "n": 320,
+    "accuracy": 1.0,
+    "seconds": 2.37,
+    "confusion": [
+      [
+        80,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        80,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        80,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        80
+      ]
+    ]
+  },
+  "stretch_vs_centercrop_label_flips": {
+    "n": 160,
+    "flips": 0,
+    "flip_rate": 0.0
+  },
+  "iris_demo_photos_stretch": {
+    "rice-blast-demo.jpg": {
+      "pred": "blast",
+      "confidence": 0.9996,
+      "probs": {
+        "bacterial_leaf_blight": 0.0,
+        "blast": 0.9996,
+        "brown_spot": 0.0,
+        "tungro": 0.0004
+      },
+      "size": [
+        300,
+        300
+      ]
+    },
+    "rice-blast-demo.webp": {
+      "pred": "blast",
+      "confidence": 0.9988,
+      "probs": {
+        "bacterial_leaf_blight": 0.0,
+        "blast": 0.9988,
+        "brown_spot": 0.0,
+        "tungro": 0.0012
+      },
+      "size": [
+        300,
+        300
+      ]
+    }
+  }
+}
