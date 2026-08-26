@@ -67,6 +67,23 @@ def test_wait_when_ponded_at_zero_despite_rain():
     assert "Do not drain" in d.reason_id
 
 
+def test_excess_pond_recommends_lower_not_harvest_drain():
+    """Complete-canopy / deep flood is not AWD; lower toward +5 cm if a drain exists."""
+    d = decide(15.0, Stage.VEG_AWD, 0.0)
+    assert d.action == "LOWER_POND"
+    assert d.action != "DRAIN"
+    assert "lower" in d.reason_id.lower()
+    assert "+5" in d.reason_id
+    assert "AWD trigger" in d.reason_id or "do not dry" in d.reason_id.lower()
+
+
+def test_shallow_awd_pond_is_not_excess():
+    d = decide(5.0, Stage.VEG_AWD, 0.0)
+    assert d.action == "WAIT"
+    assert "Do not drain" in d.reason_id
+    assert d.action != "LOWER_POND"
+
+
 def test_harvest_drain():
     d = decide(5.0, Stage.HARVEST, 0.0)
     assert d.action == "DRAIN"

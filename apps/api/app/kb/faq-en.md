@@ -10,9 +10,15 @@ regression is only a second opinion for human review; it does not change
 the BMKG total that the scheduler uses.
 
 What if it rains for a long time and the water stays above the AWD band?
-Do not drain. If the table is at or above 0 cm, the recommendation is
-WAIT. Safe AWD waits for the water to fall by itself. Pumping out is not
-the protocol. DRAIN is for harvest only.
+If the pond is still shallow (leaves in air, typically a few centimetres),
+do not drain. Safe AWD waits for the water to fall by itself. Pumping out
+to chase the −15 cm trigger is not the protocol.
+
+What if the whole plant is underwater? That is flash flood / deep ponding,
+not AWD. Gas exchange and light drop. If a drain, spillway, or bund cut is
+available, lower the water toward +5 cm so leaves are in air. Do not dry
+the plot to the AWD trigger. Waiting only for evaporation is too slow at
+that depth. DRAIN-to-empty is for harvest only.
 
 Why does methane drop? Safe AWD adds aerobic days, so methane (CH4)
 production falls versus continuous flooding. The season receipt numbers

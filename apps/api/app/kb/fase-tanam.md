@@ -8,7 +8,8 @@ before the next irrigation, following IRRI safe AWD. IRIS maps these windows
 to stages establishment, veg_awd, flowering_lock, grain_fill_awd, and harvest.
 Growth stage, transplant date, flowering lock, and harvest drain decide
 whether AWD dry-down is allowed on this plot. Prolonged rain during
-vegetative or grain-fill stages does not trigger a drain; only harvest
-uses DRAIN.
+vegetative or grain-fill stages does not trigger a drain to −15 cm; a
+shallow AWD flood is left to fall. A pond ≥ 15 cm is flood relief toward
++5 cm if drainage exists. Only harvest uses DRAIN-to-empty.
 
 Aliases: fase tanam, padi, sawah, pembungaan, vegetatif, pengisian, panen, digenangi.

@@ -103,10 +103,15 @@ Berlaku pada sistem live (bukan bagian backtest E3 - lihat asumsi di atas):
   (`hard_floor`); bila level sudah menyentuh floor, irigasi tetap dieksekusi;
 - fase `establishment` dan `flowering_lock` **dikecualikan** dari rain-hold
   (genangan fase kritis selalu dipertahankan);
-- **Do not drain:** jika muka air sudah ≥ 0 cm dan masih di atas pemicu
-  (bukan panen), aksi = `WAIT` dengan alasan "Do not drain". Hujan lama
-  tidak memicu pengeringan paksa; AWD menunggu muka air turun sendiri
-  (ET/perkolasi). `DRAIN` hanya pada `harvest`;
+- **Do not drain (pita AWD dangkal):** jika muka air sudah ≥ 0 cm dan
+  masih di atas pemicu, tetapi **< 15 cm** (bukan panen), aksi = `WAIT`
+  dengan alasan "Do not drain". Hujan yang menjaga genangan dangkal
+  (daun di udara) tidak memicu pengeringan paksa ke −15 cm;
+- **LOWER_POND (genangan berlebih):** jika muka air ≥ **15 cm**, aksi =
+  `LOWER_POND`: turunkan ke arah +5 cm *jika* ada saluran/pintu/overt
+  pematang, agar kanopi tetap di udara. Ini relief banjir, bukan AWD.
+  `DRAIN` sampai kering hanya pada `harvest`. Evaporasi saja terlalu
+  lambat pada kedalaman itu.
 - **LogReg HITL** (`rain_hitl.py`): opini kedua vs BMKG. Tidak mengubah
   `rain72` scheduler. Flag tinjauan manusia jika prediksi basah/kering
   berbeda atau P(wet) di pita 0,35–0,65. Bobot di `rain_logreg.json`

@@ -68,7 +68,7 @@ export function HomeFacets({ askHref, leafHref }: { askHref: string; leafHref: s
         title="Water"
         desc={
           status
-            ? `Today: ${actionVerb(status.action)}. Recommendation only. The pipe is the safety constraint; rain may hold irrigation, not drain a ponded field.`
+            ? `Today: ${actionVerb(status.action)}. Recommendation only. The pipe is the safety constraint; rain may hold irrigation, not drain a shallow pond.`
             : "Water-level sensing and rain-aware AWD rules for this plot."
         }
         href="/water"

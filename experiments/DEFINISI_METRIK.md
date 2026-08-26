@@ -20,7 +20,8 @@
   vs 1,0 (CF), GWP100 CH4 non-fosil = 27.
 - Backtest tidak memakai HOLD_FOR_RAIN; kebijakan rain-hold scheduler live
   didokumentasikan kanonik di `docs/METHODOLOGY.md` (bagian kebijakan
-  rain-hold scheduler), termasuk **Do not drain** (hujan lama tidak
-  mengeringkan paksa) dan LogReg HITL yang tidak mengubah `rain72`.
+  rain-hold scheduler), termasuk **Do not drain** pada genangan AWD dangkal
+  dan **LOWER_POND** jika muka air ≥ 15 cm (relief banjir ke +5 cm, bukan
+  keringkan ke −15 cm). LogReg HITL tidak mengubah `rain72`.
 - Klaim E3 dilabeli `[simulated]`. Angka literatur (Carrijo/Lampayan/Zhao)
   adalah agregat lapangan terpisah; jangan dicampur ke baris E3.

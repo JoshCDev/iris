@@ -25,6 +25,7 @@ _STAGE_LABELS = {
 _ACTION_LABELS = {
     "WAIT": "wait (safe)",
     "HOLD_FOR_RAIN": "hold irrigation (waiting for rain)",
+    "LOWER_POND": "lower pond toward +5 cm if a drain exists (not AWD dry-down)",
     "IRRIGATE": "irrigation needed",
     "DRAIN": "drain the field (harvest)",
 }

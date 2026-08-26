@@ -38,8 +38,10 @@ flowchart LR
    irrigation above a hard floor. A persistence logistic regression
    (`apps/api/app/irrigation/rain_hitl.py`) is a second opinion for human
    review; it never changes `rain72` that enters `decide()`. If the table is
-   already at or above 0 cm, the action is WAIT ("Do not drain"): AWD dries
-   by evapotranspiration. `DRAIN` is harvest only.
+   already at or above 0 cm but still a shallow pond, the action is WAIT
+   ("Do not drain"). If the pond is already ≥ 15 cm, `LOWER_POND`: lower
+   toward +5 cm if a drain exists so leaves stay in air; do not dry to
+   −15 cm. `DRAIN` is harvest only.
 2. **Leaf.** Quality guard, then five-class ONNX triage (blast, brown spot,
    tungro, bacterial leaf blight, healthy). Screening, not a laboratory diagnosis.
 3. **Assistant.** DeepSeek Chat Completions (`https://api.deepseek.com`),

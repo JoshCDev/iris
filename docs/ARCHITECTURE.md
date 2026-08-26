@@ -13,7 +13,7 @@ database SQLite.
 | Web dashboard | `apps/web` | Next.js App Router + TypeScript + Tailwind, port 3000; seluruh panggilan `/api/*` di-rewrite sebagai proxy ke FastAPI `:8000` |
 | Ingest & decision API | `apps/api` | FastAPI port 8000; menerima pembacaan sensor, menjalankan keputusan **pada saat ingest**, mengekspos status/riwayat/receipt |
 | Stage machine AWD (Pilar 1) | `apps/api/app/irrigation/protocol.py` | Fase: establishment <14 hari; veg_awd <55 (pemicu −15 cm); flowering_lock <80 (**wajib genang ≥ +3 cm**); grain_fill_awd <100 (−15 cm); harvest ≥100 |
-| Scheduler & rain-skip | `apps/api/app/irrigation/scheduler.py` | Keputusan irigasi: HOLD_FOR_RAIN bila rain72 ≥ 15 mm/72 jam dan level masih di atas hard floor (pemicu −10 cm); establishment & flowering_lock dikecualikan. Jika muka air ≥ 0 cm dan di atas pemicu: WAIT **"Do not drain"** (AWD mengering lewat ET, bukan pompa keluar). `DRAIN` hanya panen |
+| Scheduler & rain-skip | `apps/api/app/irrigation/scheduler.py` | HOLD_FOR_RAIN bila rain72 ≥ 15 mm/72 jam dan level masih di atas hard floor (pemicu −10 cm); establishment & flowering_lock dikecualikan. Muka air ≥ 0 cm dan < 15 cm: WAIT **"Do not drain"** (AWD dangkal, daun di udara). Muka air ≥ 15 cm: **LOWER_POND** (turunkan ke +5 cm jika ada saluran; bukan keringkan ke −15 cm). `DRAIN` hanya panen |
 | Rain HITL (LogReg) | `apps/api/app/irrigation/rain_hitl.py`, `rain_logreg.json` | Opini kedua persistensi/klimatologi vs BMKG. Tidak pernah mengubah `rain72` yang masuk `decide()`. Flag `needs_review` jika basah/kering tidak sama atau P(wet) 0,35–0,65. Dilatih Open-Meteo harian Salatiga (n=3154, akurasi latih 0,59 vs base rate ~0,50) |
 | Akuntansi karbon | `apps/api/app/irrigation/ipcc.py` | Receipt IPCC Tier-1: EF 1,30 (Tbl 5.11), SF_w 1/0,78 (Tbl 5.12), GWP 27 (AR6); label `simulated \| measured \| projected` |
 | Cuaca | `apps/api/app/irrigation/weather_bmkg.py` + `bmkg_areas.py` | Prakiraan BMKG per kelurahan (`adm4`). Katalog 83.763 kode dari PDF part 1-4 dimuat ke tabel `bmkg_areas`. Default demo: Kelurahan Salatiga `33.73.01.1003` |
@@ -78,8 +78,10 @@ sequenceDiagram
   `simulated | measured | projected`; angka eksperimen dilaporkan sebagai
   `[simulated]` sampai tervalidasi lapangan. Angka literatur (Carrijo,
   Lampayan, Zhao) adalah agregat lapangan terpisah, bukan petak demo.
-- **Rain HITL**: LogReg persistensi tidak boleh men-skip irigasi; muka air
-  ≥ 0 cm tidak boleh DRAIN di luar panen.
+- **Rain HITL**: LogReg persistensi tidak boleh men-skip irigasi. Genangan
+  dangkal (≥ 0 cm, < 15 cm) tidak `DRAIN` di luar panen. Genangan ≥ 15 cm
+  memakai `LOWER_POND` (turun ke +5 cm jika ada saluran), bukan keringkan
+  ke pemicu AWD.
 - **Offline ladder**: LLM online (DeepSeek, tool-calling ≤6 hop, 30 s) → jika
   gagal/tidak ada kunci API → fallback retrieval TF-IDF atas `apps/api/app/kb/*.md`
   plus one-liner status petak, ditandai badge mode offline di UI.

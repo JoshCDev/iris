@@ -13,11 +13,14 @@ because AWD adds aerobic (not flooded) days. Why irrigate now? Why is
 irrigation on hold? When does this plot need irrigation? Why does methane
 drop?
 
-If rain keeps the field ponded (water table at or above 0 cm), IRIS does
-not recommend pumping the field dry. The action is WAIT: “Do not drain.”
-Safe AWD dries by waiting for evapotranspiration, not by draining. DRAIN
-is harvest only. A persistence rain model may flag the BMKG forecast for
-human review; it never skips irrigation by itself.
+If rain keeps a *shallow* AWD flood (about 0–10 cm, leaves in air), IRIS
+does not recommend pumping the field dry. The action is WAIT: “Do not
+drain.” Safe AWD dries by waiting for evapotranspiration and seepage.
+If the pond is already deep (≥ 15 cm), that is flood water, not AWD: if
+a drain or spillway exists, lower toward +5 cm so the canopy stays in
+air. Do not dry to the −15 cm AWD trigger. DRAIN-to-empty is harvest only.
+A persistence rain model may flag the BMKG forecast for human review; it
+never skips irrigation by itself.
 
 Aliases: dasar, irigasi, sawah, diairi, menghemat, metana, pembungaan, digenangi,
 drain, hujan, HITL.

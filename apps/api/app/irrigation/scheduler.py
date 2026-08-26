@@ -4,6 +4,11 @@ from app.irrigation.protocol import Stage, trigger_level_cm
 
 REFILL_CM = 5.0
 RAIN_SKIP_MM = 15.0
+# IRRI refill is ~5 cm; standing water of 5–10 cm still leaves the canopy in air.
+# At >= 15 cm the pond is already deep vs that protocol (young plants especially).
+# Complete canopy submergence of a tillering plant is typically much deeper;
+# this is flood relief toward +5 cm, not an AWD dry-down to -15 cm.
+EXCESS_POND_CM = 15.0
 
 
 @dataclass
@@ -18,6 +23,15 @@ def decide(level_cm: float, stage: Stage, rain72_mm: float) -> Decision:
     if trig is None:
         return Decision("DRAIN",
                         "Season complete: the field can be drained for harvest.")
+    if stage != Stage.HARVEST and level_cm >= EXCESS_POND_CM:
+        return Decision(
+            "LOWER_POND",
+            "Excess pond. If a drain, spillway, or bund cut is available, "
+            f"lower the water toward +{REFILL_CM:.0f} cm so leaves stay in air. "
+            "Do not dry the field to the AWD trigger. "
+            "Evaporation alone is too slow at this depth. "
+            "Check again in 15 minutes.",
+        )
     if level_cm > trig:
         if stage != Stage.HARVEST and level_cm >= 0.0:
             return Decision(

@@ -19,8 +19,10 @@ export default function WaterPage() {
               not start a pump. The AWD pipe is the safety constraint. The
               72-hour BMKG forecast may only hold irrigation above a hard
               floor. A persistence LogReg flags disagreement for human review
-              and never skips irrigation by itself. If rain keeps the table
-              at or above 0 cm, the action is WAIT: do not drain.
+              and never skips irrigation by itself. A shallow AWD flood (leaves
+              in air) is left to fall by itself. If the pond is already deep
+              (≥ 15 cm), lower toward +5 cm if a drain exists; do not dry to
+              the AWD trigger.
             </p>
           </div>
         </div>

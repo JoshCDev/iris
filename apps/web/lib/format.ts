@@ -36,7 +36,9 @@ export function fmtLevel(levelCm: number | null | undefined): string {
 export const ACTION_META: Record<string, { label: string; tone: "default" | "alert" | "danger" }> = {
   WAIT: { label: "Safe (wait)", tone: "default" },
   HOLD_FOR_RAIN: { label: "Hold for rain", tone: "alert" },
+  LOWER_POND: { label: "Lower pond if you can", tone: "alert" },
   IRRIGATE: { label: "Irrigate now", tone: "danger" },
+  DRAIN: { label: "Drain for harvest", tone: "alert" },
 };
 
 export function actionMeta(action: string | null): { label: string; tone: "default" | "alert" | "danger" } {
@@ -47,7 +49,9 @@ export function actionMeta(action: string | null): { label: string; tone: "defau
 export const ACTION_VERB: Record<string, string> = {
   WAIT: "Hold irrigation",
   HOLD_FOR_RAIN: "Hold for rain",
+  LOWER_POND: "Lower pond if you can",
   IRRIGATE: "Irrigate now",
+  DRAIN: "Drain for harvest",
 };
 
 export function actionVerb(action: string | null): string {
@@ -130,6 +134,7 @@ export function classLabelId(slug: string): string {
 export function askWhyQuestion(action: string | null | undefined): string {
   if (action === "IRRIGATE") return "Why irrigate now?";
   if (action === "HOLD_FOR_RAIN") return "Why is irrigation on hold?";
+  if (action === "LOWER_POND") return "Why lower the pond instead of waiting?";
   return "When does this plot need irrigation?";
 }
 
