@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 import sys
 from datetime import date, datetime, timedelta, timezone
@@ -31,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import db
 from app.config import get_settings
 from app.db import session_scope
+from app.irrigation.bmkg_areas import ensure_bmkg_areas
 from app.irrigation.protocol import stage_on
 from app.irrigation.scheduler import REFILL_CM, decide
 from app.irrigation.water import level_cm_to_m3
@@ -218,6 +220,9 @@ def seed_demo(db_url: str | None = None) -> dict[str, Any]:
     series = _build_series()
     database = db.init_db(db_url) if db_url else db.get_db()
     with session_scope(database) as conn:
+        n_areas = 0
+        if not os.environ.get("IRIS_SKIP_DOTENV"):
+            n_areas = ensure_bmkg_areas(conn)
         replaced = db.delete_demo_rows(conn)
         transplant = _transplant_date()
         plot_id = db.create_plot(
@@ -252,6 +257,7 @@ def seed_demo(db_url: str | None = None) -> dict[str, Any]:
         "hold_for_rain": int(holds),
         "vision_reports": vision_reports,
         "replaced_plots": replaced,
+        "bmkg_areas": n_areas,
         "is_demo": True,
     }
 

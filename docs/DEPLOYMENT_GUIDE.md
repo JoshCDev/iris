@@ -151,7 +151,6 @@ asisten tetap menjawab dalam mode offline.
 
 ## Catatan Demo / Panggung
 
-- Ikuti skenario pementasan di [`docs/DEMO_SCRIPT.md`](./DEMO_SCRIPT.md).
 - Jalankan `scripts/seed_demo.py` sebelum demo untuk mengembalikan data contoh;
   seeding **aman dijalankan ulang (idempoten)** sehingga tidak menduplikasi data.
 - Set `DEEPSEEK_API_KEY` di terminal tempat backend diluncurkan agar mode live;

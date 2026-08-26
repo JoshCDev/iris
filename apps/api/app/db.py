@@ -176,6 +176,12 @@ def create_plot(conn: sqlite3.Connection, *, name: str, transplant_date: str,
     return int(cur.lastrowid)
 
 
+def update_plot_bmkg_adm4(conn: sqlite3.Connection, plot_id: int,
+                          bmkg_adm4: str) -> None:
+    conn.execute("UPDATE plots SET bmkg_adm4 = ? WHERE id = ?",
+                 (bmkg_adm4, plot_id))
+
+
 def insert_reading(conn: sqlite3.Connection, *, plot_id: int, ts: str,
                    dist_cm: float, level_cm: float,
                    batt_v: float | None = None) -> None:

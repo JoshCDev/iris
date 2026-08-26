@@ -98,6 +98,5 @@ asisten.
 - `docs/DEPLOYMENT_GUIDE.md` - panduan deployment
 - `docs/poster-content.md` - konten poster
 - `docs/MODEL_CARD.md` - kartu model visi
-- `docs/DEMO_SCRIPT.md` - skenario demo
 - `experiments/DEFINISI_METRIK.md` - definisi metrik eksperimen
 - `docs/history/` - arsip

@@ -97,16 +97,13 @@ set; field validation is not claimed ([docs/MODEL_CARD.md](docs/MODEL_CARD.md)).
 
 | File | Content |
 | --- | --- |
-| [docs/CANONICAL.md](docs/CANONICAL.md) | Which paths are authoritative |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Components and data flow |
 | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) | AWD protocol and experiments |
 | [docs/IPCC_ACCOUNTING.md](docs/IPCC_ACCOUNTING.md) | Tier-1 CH4 accounting |
 | [docs/SENSOR_VALIDATION.md](docs/SENSOR_VALIDATION.md) | Sensor notes |
 | [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) | Run and deploy |
 | [docs/poster-content.md](docs/poster-content.md) | Poster copy |
-| [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md) | Contest upload list |
 | [docs/MODEL_CARD.md](docs/MODEL_CARD.md) | Vision model card |
-| [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | Jury run-of-show |
 | [experiments/DEFINISI_METRIK.md](experiments/DEFINISI_METRIK.md) | Metric definitions |
 
 ```

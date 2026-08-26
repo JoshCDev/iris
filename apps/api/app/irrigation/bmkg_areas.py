@@ -7,7 +7,7 @@ import sqlite3
 from pathlib import Path
 
 AREAS_PATH = (
-    Path(__file__).resolve().parents[1] / "data" / "bmkg_areas.json.gz"
+    Path(__file__).resolve().parents[2] / "data" / "bmkg_areas.json.gz"
 )
 
 

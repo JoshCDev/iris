@@ -126,6 +126,10 @@ class ReadingIn(BaseModel):
     pipe_zero_cm: float | None = None
 
 
+class PlotPatch(BaseModel):
+    bmkg_adm4: str
+
+
 def _status_payload(conn, plot) -> dict[str, Any]:
     plot_id = int(plot["id"])
     reading = db.latest_reading(conn, plot_id)
@@ -351,6 +355,22 @@ def weather_areas(q: str = "", limit: int = 20):
     with db.session_scope() as conn:
         ensure_bmkg_areas(conn)
         return {"results": lookup_bmkg_areas(conn, q, cap)}
+
+
+@app.patch("/api/plots/{plot_id}")
+def patch_plot(plot_id: int, body: PlotPatch):
+    code = body.bmkg_adm4.strip()
+    with db.session_scope() as conn:
+        plot = db.get_plot(conn, plot_id)
+        if plot is None:
+            raise HTTPException(status_code=404, detail="plot not found")
+        ensure_bmkg_areas(conn)
+        hit = lookup_bmkg_areas(conn, code, 1)
+        if not hit or hit[0]["kode_wilayah"] != code:
+            raise HTTPException(status_code=400, detail="unknown bmkg_adm4")
+        db.update_plot_bmkg_adm4(conn, plot_id, code)
+        return {"plot_id": plot_id, "bmkg_adm4": code,
+                "nama_wilayah": hit[0]["nama_wilayah"]}
 
 
 @app.post("/api/demo/seed")
