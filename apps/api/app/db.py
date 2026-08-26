@@ -20,8 +20,15 @@ CREATE TABLE IF NOT EXISTS plots (
     scaled INTEGER NOT NULL DEFAULT 0,
     lat REAL,
     lon REAL,
+    bmkg_adm4 TEXT,
     is_demo INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE TABLE IF NOT EXISTS bmkg_areas (
+    kode_wilayah TEXT PRIMARY KEY,
+    nama_wilayah TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_bmkg_areas_nama ON bmkg_areas(nama_wilayah);
 
 CREATE TABLE IF NOT EXISTS readings (
     id INTEGER PRIMARY KEY,
@@ -100,6 +107,7 @@ class Database:
     def init_db(self) -> None:
         with self.connect() as conn:
             conn.executescript(_SCHEMA)
+            _ensure_plot_columns(conn)
 
 
 _default: Database | None = None
@@ -132,6 +140,12 @@ def session_scope(db: Database | None = None) -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
+def _ensure_plot_columns(conn: sqlite3.Connection) -> None:
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(plots)")}
+    if "bmkg_adm4" not in cols:
+        conn.execute("ALTER TABLE plots ADD COLUMN bmkg_adm4 TEXT")
+
+
 # ---------------------------------------------------------------------------
 # Row helpers (thin, explicit SQL - PhyToSignal storage.py style)
 # ---------------------------------------------------------------------------
@@ -148,15 +162,16 @@ def create_plot(conn: sqlite3.Connection, *, name: str, transplant_date: str,
                 variety: str = "", area_ha: float = 1.0,
                 pipe_zero_cm: float = 30.0, scaled: bool = False,
                 lat: float | None = None, lon: float | None = None,
+                bmkg_adm4: str | None = None,
                 is_demo: bool = True) -> int:
     cur = conn.execute(
         """
         INSERT INTO plots (name, variety, area_ha, transplant_date,
-                           pipe_zero_cm, scaled, lat, lon, is_demo)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                           pipe_zero_cm, scaled, lat, lon, bmkg_adm4, is_demo)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (name, variety, area_ha, transplant_date, pipe_zero_cm,
-         int(scaled), lat, lon, int(is_demo)),
+         int(scaled), lat, lon, bmkg_adm4, int(is_demo)),
     )
     return int(cur.lastrowid)
 

@@ -188,12 +188,22 @@ def get_plot_status(plot_id: int | None = None) -> dict[str, Any]:
 
 
 def get_weather() -> dict[str, Any]:
-    from app.config import get_settings
+    from app.db import session_scope
     from app.irrigation.weather_bmkg import fetch_forecast_72h_rain
 
-    settings = get_settings()
+    adm4 = None
     try:
-        rain = fetch_forecast_72h_rain(settings.lat, settings.lon)
+        with session_scope() as conn:
+            row = conn.execute(
+                "SELECT bmkg_adm4 FROM plots WHERE bmkg_adm4 IS NOT NULL"
+                " AND trim(bmkg_adm4) != '' ORDER BY id ASC LIMIT 1"
+            ).fetchone()
+            if row is not None:
+                adm4 = row["bmkg_adm4"]
+    except Exception:
+        adm4 = None
+    try:
+        rain = fetch_forecast_72h_rain(adm4=adm4)
         return {"rain72_mm": round(float(rain), 1), "stale": False}
     except Exception:
         return {"rain72_mm": 0.0, "stale": True}

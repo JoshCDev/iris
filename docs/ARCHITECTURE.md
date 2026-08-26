@@ -15,7 +15,7 @@ database SQLite.
 | Stage machine AWD (Pilar 1) | `apps/api/app/irrigation/protocol.py` | Fase: establishment <14 hari; veg_awd <55 (pemicu −15 cm); flowering_lock <80 (**wajib genang ≥ +3 cm**); grain_fill_awd <100 (−15 cm); harvest ≥100 |
 | Scheduler & rain-skip | `apps/api/app/irrigation/scheduler.py`, `water.py` | Keputusan irigasi per event hujan: skip bila rain72 ≥ `RAIN_SKIP_MM` = 15 mm/72 jam, dengan hard floor pemicu −10 cm; establishment & flowering_lock dikecualikan dari skip |
 | Akuntansi karbon | `apps/api/app/irrigation/ipcc.py` | Receipt IPCC Tier-1: EF 1,30 (Tbl 5.11), SF_w 1/0,78 (Tbl 5.12), GWP 27 (AR6); label `simulated \| measured \| projected` |
-| Cuaca | `apps/api/app/irrigation/weather_bmkg.py` | Prakiraan hujan 72 jam dari BMKG (`api.bmkg.go.id/publik/prakiraan-cuaca?adm4=`), default Kelurahan Salatiga `33.73.01.1003` |
+| Cuaca | `apps/api/app/irrigation/weather_bmkg.py` + `bmkg_areas.py` | Prakiraan BMKG per kelurahan (`adm4`). Katalog 83.763 kode dari PDF part 1-4 dimuat ke tabel `bmkg_areas`. Default demo: Kelurahan Salatiga `33.73.01.1003` |
 | Vision pipeline (Pilar 2) | `apps/api/app/vision/{crop_packs,image_guard,inference,advisory,severity}.py` | Image guard (kualitas + penolakan non-daun; rule tekstur entropy ≥3,0) → inferensi ONNX di CPU → severity + advisory dwibahasa ID/EN |
 | Model pack padi | `apps/api/crop_packs/rice/` (`model.onnx`) | MobileNetV3-Large 16,8 MB; 4 kelas: blast, brown_spot, tungro, bacterial_leaf_blight |
 | Fusion risiko | `apps/api/app/fusion/risk.py` + `fusion_rules.json` | Matriks rule penyakit × awd_state (`flooded/shallow_dry/deep_dry/beyond_trigger/flowering_lock`) × wet_weather (rain72 ≥ 15 mm) → `risk_level` + drivers ID/EN + `irrigation_note` |

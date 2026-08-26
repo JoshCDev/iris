@@ -29,9 +29,8 @@ def _solid_green_jpeg() -> bytes:
 def client(tmp_path, monkeypatch):
     db.init_db(f"sqlite:///{(tmp_path / 'vision.db').as_posix()}")
     monkeypatch.setattr(main_mod, "fetch_forecast_72h_rain",
-                        lambda a, b: 0.0)
-    main_mod._weather_cache["ts"] = 0.0
-    main_mod._weather_cache["value"] = None
+                        lambda *a, **k: 0.0)
+    main_mod._weather_cache.clear()
     return TestClient(main_mod.app)
 
 

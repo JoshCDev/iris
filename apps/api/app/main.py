@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import secrets
 import time as _time
 from datetime import date, datetime, timedelta, timezone
@@ -20,6 +21,7 @@ from app.irrigation.ipcc import build_receipt
 from app.irrigation.protocol import stage_on, trigger_level_cm
 from app.irrigation.reason_text import english_reason
 from app.irrigation.scheduler import REFILL_CM, decide
+from app.irrigation.bmkg_areas import ensure_bmkg_areas, lookup_bmkg_areas
 from app.irrigation.weather_bmkg import fetch_forecast_72h_rain
 from app.receipts import (
     E3_CLAIM_NOTE,
@@ -68,6 +70,14 @@ app.add_middleware(
 
 
 db.init_db(get_settings().iris_db)
+if not os.environ.get("IRIS_SKIP_DOTENV"):
+    try:
+        with db.session_scope() as _conn:
+            n_areas = ensure_bmkg_areas(_conn)
+            if n_areas:
+                log.info("bmkg_areas: %s kelurahan", n_areas)
+    except Exception:
+        log.warning("bmkg_areas seed skipped", exc_info=True)
 
 
 # --- vision singletons (rice pack; loaded lazily + on startup) --------------
@@ -170,8 +180,7 @@ def post_reading(body: ReadingIn, _: None = Depends(require_token)):
         stage = stage_on(_stage_days(
             date.fromisoformat(plot["transplant_date"]), today))
         try:
-            rain = fetch_forecast_72h_rain(get_settings().lat,
-                                           get_settings().lon)
+            rain = fetch_forecast_72h_rain(plot=plot)
         except Exception:
             log.warning("weather fetch failed; using rain72_mm=0.0")
             rain = 0.0
@@ -302,28 +311,46 @@ def plot_receipt(plot_id: int, season_days: int = 100, claim: str = "e3"):
             claim_note=PLOT_CLAIM_NOTE)
 
 
-_weather_cache: dict[str, Any] = {"ts": 0.0, "value": None}
+_weather_cache: dict[str, dict[str, Any]] = {}
 _WEATHER_TTL_S = 15 * 60.0
 
 
+def _adm4_for_plot(plot_id: int | None) -> str:
+    from app.irrigation.weather_bmkg import DEFAULT_ADM4
+
+    if plot_id is not None:
+        with db.session_scope() as conn:
+            plot = db.get_plot(conn, plot_id)
+            if plot is not None and plot["bmkg_adm4"]:
+                return str(plot["bmkg_adm4"])
+    return get_settings().bmkg_adm4 or DEFAULT_ADM4
+
+
 @app.get("/api/weather/forecast")
-def weather_forecast():
+def weather_forecast(plot_id: int | None = None):
+    adm4 = _adm4_for_plot(plot_id)
     now = _time.time()
-    fresh = (_weather_cache["value"] is not None
-             and now - _weather_cache["ts"] < _WEATHER_TTL_S)
+    entry = _weather_cache.get(adm4)
+    fresh = (entry is not None
+             and now - entry["ts"] < _WEATHER_TTL_S)
     if fresh:
-        return {"rain72_mm": _weather_cache["value"], "stale": False}
+        return {"rain72_mm": entry["value"], "stale": False}
     try:
-        rain = fetch_forecast_72h_rain(get_settings().lat,
-                                       get_settings().lon)
+        rain = fetch_forecast_72h_rain(adm4=adm4)
     except Exception:
         log.warning("weather fetch failed; failing open")
-        cached = _weather_cache["value"]
-        return {"rain72_mm": cached if cached is not None else 0.0,
-                "stale": True}
-    _weather_cache["ts"] = now
-    _weather_cache["value"] = rain
+        cached = entry["value"] if entry is not None else 0.0
+        return {"rain72_mm": cached, "stale": True}
+    _weather_cache[adm4] = {"ts": now, "value": rain}
     return {"rain72_mm": rain, "stale": False}
+
+
+@app.get("/api/weather/areas")
+def weather_areas(q: str = "", limit: int = 20):
+    cap = max(1, min(int(limit), 50))
+    with db.session_scope() as conn:
+        ensure_bmkg_areas(conn)
+        return {"results": lookup_bmkg_areas(conn, q, cap)}
 
 
 @app.post("/api/demo/seed")

@@ -223,7 +223,8 @@ def seed_demo(db_url: str | None = None) -> dict[str, Any]:
         plot_id = db.create_plot(
             conn, name=PLOT_NAME, transplant_date=transplant.isoformat(),
             variety=VARIETY, area_ha=AREA_HA, pipe_zero_cm=PIPE_ZERO_CM,
-            scaled=False, lat=LAT, lon=LON, is_demo=True)
+            scaled=False, lat=LAT, lon=LON, bmkg_adm4="33.73.01.1003",
+            is_demo=True)
         for s in series:
             db.insert_reading(conn, plot_id=plot_id, ts=s["ts"],
                               dist_cm=s["dist_cm"],

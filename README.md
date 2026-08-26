@@ -75,7 +75,7 @@ Open http://localhost:3000
 | `IRIS_DB` | `sqlite:///<repo>/apps/api/storage/iris.db` | SQLite URL |
 | `IRIS_DEVICE_TOKEN` | empty | Empty: ingest auth is optional (demo) |
 | `WEB_ORIGIN` | `http://localhost:3000` | CORS origin |
-| `BMKG_ADM4` | `33.73.01.1003` | Kelurahan Salatiga (Sidorejo). From BMKG area-code PDFs |
+| `BMKG_ADM4` | `33.73.01.1003` | Fallback kelurahan if a plot has no `bmkg_adm4`. Catalog is `bmkg_areas` |
 | `BMKG_API_KEY` | empty | Optional; publik forecast does not require a key |
 
 ## Experiment E3 (simulated, 100 days, 1 ha, 0 mm rain)
@@ -104,12 +104,10 @@ set; field validation is not claimed ([docs/MODEL_CARD.md](docs/MODEL_CARD.md)).
 | [docs/SENSOR_VALIDATION.md](docs/SENSOR_VALIDATION.md) | Sensor notes |
 | [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) | Run and deploy |
 | [docs/poster-content.md](docs/poster-content.md) | Poster copy |
-| [assets/poster/IRIS-INOVATALK2026-poster-A1.pdf](assets/poster/IRIS-INOVATALK2026-poster-A1.pdf) | A1 PDF |
 | [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md) | Contest upload list |
 | [docs/MODEL_CARD.md](docs/MODEL_CARD.md) | Vision model card |
 | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | Jury run-of-show |
 | [experiments/DEFINISI_METRIK.md](experiments/DEFINISI_METRIK.md) | Metric definitions |
-| [docs/history/](docs/history/) | Archived specs |
 
 ```
 iris-platform/

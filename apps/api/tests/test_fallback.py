@@ -119,8 +119,7 @@ def client(monkeypatch):
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     cfg.reset_settings_cache()
     monkeypatch.setattr(agent, "_build_client", lambda: None)
-    main_mod._weather_cache["ts"] = 0.0
-    main_mod._weather_cache["value"] = None
+    main_mod._weather_cache.clear()
     return TestClient(main_mod.app)
 
 

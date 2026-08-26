@@ -65,8 +65,18 @@ def _forecast_payload(adm4: str) -> dict:
 
 
 def fetch_forecast_72h_rain(lat: float | None = None,
-                            lon: float | None = None) -> float:
+                            lon: float | None = None,
+                            *,
+                            adm4: str | None = None,
+                            plot: object | None = None) -> float:
     """Return 72 h rainfall (mm). lat/lon kept for call-site compatibility."""
     del lat, lon
-    adm4 = get_settings().bmkg_adm4 or DEFAULT_ADM4
-    return parse_bmkg_forecast(_forecast_payload(adm4))
+    code = adm4
+    if not code and plot is not None:
+        try:
+            code = plot["bmkg_adm4"]  # type: ignore[index]
+        except (KeyError, IndexError, TypeError):
+            code = None
+    if not code:
+        code = get_settings().bmkg_adm4 or DEFAULT_ADM4
+    return parse_bmkg_forecast(_forecast_payload(str(code)))

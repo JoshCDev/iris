@@ -40,6 +40,7 @@ def test_seed_contract_counts_and_plot(tmp_path):
     assert abs(plot["pipe_zero_cm"] - PIPE_ZERO_CM) < 1e-9
     assert abs(plot["lat"] - LAT) < 1e-9
     assert abs(plot["lon"] - LON) < 1e-9
+    assert plot["bmkg_adm4"] == "33.73.01.1003"
     expected_transplant = _transplant_date().isoformat()
     assert plot["transplant_date"] == expected_transplant
     assert len(readings) == 2880

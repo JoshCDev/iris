@@ -63,7 +63,7 @@ def test_get_plot_status_no_plots(tmp_path):
 def test_get_weather_ok(monkeypatch, seeded_db):
     from app.irrigation import weather_bmkg as w
 
-    monkeypatch.setattr(w, "fetch_forecast_72h_rain", lambda a, b: 17.5)
+    monkeypatch.setattr(w, "fetch_forecast_72h_rain", lambda *a, **k: 17.5)
     out = tools.get_weather()
     assert out == {"rain72_mm": 17.5, "stale": False}
 
@@ -71,7 +71,7 @@ def test_get_weather_ok(monkeypatch, seeded_db):
 def test_get_weather_fail_open(monkeypatch, seeded_db):
     from app.irrigation import weather_bmkg as w
 
-    def boom(a, b):
+    def boom(*args, **kwargs):
         raise RuntimeError("offline")
 
     monkeypatch.setattr(w, "fetch_forecast_72h_rain", boom)

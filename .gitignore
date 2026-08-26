@@ -23,9 +23,10 @@ out/
 *.sqlite3
 apps/api/storage/uploads/
 
-# Poster charts and build scripts (PDF stays)
+# Poster (PDF, charts, build scripts stay local)
 assets/poster/*.png
 assets/poster/*.py
+assets/poster/*.pdf
 assets/poster/tmp_preview/
 
 # Internal planning / archive (not the public GitHub tree)

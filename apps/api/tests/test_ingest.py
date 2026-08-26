@@ -19,9 +19,8 @@ def _swap_db(tmp_path):
 def _client(tmp_path, monkeypatch, rain=0.0):
     _swap_db(tmp_path)
     monkeypatch.setattr(main_mod, "fetch_forecast_72h_rain",
-                        lambda a, b: rain)
-    main_mod._weather_cache["ts"] = 0.0
-    main_mod._weather_cache["value"] = None
+                        lambda *a, **k: rain)
+    main_mod._weather_cache.clear()
     return TestClient(main_mod.app)
 
 
@@ -34,7 +33,7 @@ def client(tmp_path, monkeypatch):
 def require_token_mode(tmp_path, monkeypatch):
     _swap_db(tmp_path)
     monkeypatch.setattr(main_mod, "fetch_forecast_72h_rain",
-                        lambda a, b: 0.0)
+                        lambda *a, **k: 0.0)
     monkeypatch.setenv("IRIS_DEVICE_TOKEN", "dev-token")
     cfg.reset_settings_cache()
     yield
@@ -197,7 +196,7 @@ def test_scaled_mesocosm_trigger(client):
 # --- weather endpoint ---------------------------------------------------------
 
 def test_weather_fail_open_on_error(client, monkeypatch):
-    def boom(a, b):
+    def boom(*args, **kwargs):
         raise RuntimeError("offline")
     monkeypatch.setattr(main_mod, "fetch_forecast_72h_rain", boom)
     r = client.get("/api/weather/forecast")
@@ -208,7 +207,7 @@ def test_weather_fail_open_on_error(client, monkeypatch):
 def test_weather_caches_for_15_minutes(client, monkeypatch):
     calls = {"n": 0}
 
-    def fake(a, b):
+    def fake(*args, **kwargs):
         calls["n"] += 1
         return 17.5
     monkeypatch.setattr(main_mod, "fetch_forecast_72h_rain", fake)

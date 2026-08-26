@@ -6,7 +6,7 @@
 | --- | --- |
 | Aplikasi (FastAPI + Next.js) | `apps/api`, `apps/web` |
 | Deck poster | `docs/poster-content.md` |
-| PDF A1 (unggah) | `assets/poster/IRIS-INOVATALK2026-poster-A1.pdf` |
+| PDF A1 (unggah, lokal) | `assets/poster/IRIS-INOVATALK2026-poster-A1.pdf` (tidak di GitHub) |
 | Backtest E3 | `experiments/outputs/backtest_summary.json` |
 | Guidebook lomba | `docs/competition/Ketentuan_INOVATALK2026.pdf` |
 | Skrip demo juri | `docs/DEMO_SCRIPT.md` |
