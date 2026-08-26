@@ -79,9 +79,11 @@ cd ../api
 | `BMKG_ADM4` | `33.73.01.1003` | Tidak | Kode wilayah tingkat IV (kelurahan/desa) untuk prakiraan BMKG. Default: Kelurahan Salatiga, Kec. Sidorejo |
 | `BMKG_API_KEY` | kosong | Tidak | Opsional. Endpoint publik BMKG tidak mewajibkan kunci |
 
-LogReg HITL hujan (`rain_hitl.py`) memanggil Open-Meteo untuk hujan 1/3 hari
-terakhir. Jika panggilan gagal, flag HITL tetap jalan dengan fitur hari-dalam-tahun
-saja (`doy_only`) dan **tidak** mengubah `rain72` BMKG.
+LogReg hujan (`rain_hitl.py` / `rain_logreg.json`) memanggil Open-Meteo untuk
+hujan 1/3 hari terakhir agar model punya fitur. Jika panggilan gagal, LogReg
+tetap jalan dengan fitur hari-dalam-tahun saja (`doy_only`) dan **tidak**
+mengubah `rain72` BMKG. Flag *human review* (HITL) terpisah: naik jika
+LogReg dan BMKG tidak setuju.
 
 Contoh set variabel di PowerShell (terminal yang sama dengan tempat backend
 dijalankan):

@@ -112,11 +112,12 @@ Berlaku pada sistem live (bukan bagian backtest E3 - lihat asumsi di atas):
   pematang, agar kanopi tetap di udara. Ini relief banjir, bukan AWD.
   `DRAIN` sampai kering hanya pada `harvest`. Evaporasi saja terlalu
   lambat pada kedalaman itu.
-- **LogReg HITL** (`rain_hitl.py`): opini kedua vs BMKG. Tidak mengubah
-  `rain72` scheduler. Flag tinjauan manusia jika prediksi basah/kering
-  berbeda atau P(wet) di pita 0,35–0,65. Bobot di `rain_logreg.json`
-  (Open-Meteo Salatiga; akurasi latih ~0,59, base rate ~0,50). Bukan
-  pengganti BMKG dan bukan pengukur lapangan.
+- **Rain LogReg** (`rain_logreg.json`): opini kedua vs BMKG. Tidak mengubah
+  `rain72` scheduler.
+- **HITL**: manusia mengonfirmasi keputusan. Flag tinjauan hujan jika
+  LogReg vs BMKG berbeda atau P(wet) di pita 0,35–0,65 (`rain_hitl.py`
+  hanya mengemas flag itu; bukan nama untuk model). Bukan pengganti BMKG
+  dan bukan pengukur lapangan.
 
 Deviasi flowering-lock vs panduan IRRI RKB: pemicu +3 cm dengan refill ke
 +5 cm menjaga pita ±3–5 cm, sedikit lebih longgar dari panduan IRRI RKB

@@ -14,7 +14,8 @@ database SQLite.
 | Ingest & decision API | `apps/api` | FastAPI port 8000; menerima pembacaan sensor, menjalankan keputusan **pada saat ingest**, mengekspos status/riwayat/receipt |
 | Stage machine AWD (Pilar 1) | `apps/api/app/irrigation/protocol.py` | Fase: establishment <14 hari; veg_awd <55 (pemicu −15 cm); flowering_lock <80 (**wajib genang ≥ +3 cm**); grain_fill_awd <100 (−15 cm); harvest ≥100 |
 | Scheduler & rain-skip | `apps/api/app/irrigation/scheduler.py` | HOLD_FOR_RAIN bila rain72 ≥ 15 mm/72 jam dan level masih di atas hard floor (pemicu −10 cm); establishment & flowering_lock dikecualikan. Muka air ≥ 0 cm dan < 15 cm: WAIT **"Do not drain"** (AWD dangkal, daun di udara). Muka air ≥ 15 cm: **LOWER_POND** (turunkan ke +5 cm jika ada saluran; bukan keringkan ke −15 cm). `DRAIN` hanya panen |
-| Rain HITL (LogReg) | `apps/api/app/irrigation/rain_hitl.py`, `rain_logreg.json` | Opini kedua persistensi/klimatologi vs BMKG. Tidak pernah mengubah `rain72` yang masuk `decide()`. Flag `needs_review` jika basah/kering tidak sama atau P(wet) 0,35–0,65. Dilatih Open-Meteo harian Salatiga (n=3154, akurasi latih 0,59 vs base rate ~0,50) |
+| Rain LogReg | `apps/api/app/irrigation/rain_logreg.json` + `rain_hitl.py` (`assess_rain_hitl`) | Model persistensi/klimatologi: P(wet) 72 jam. Opini kedua vs BMKG. **Tidak** mengubah `rain72` yang masuk `decide()`. Dilatih Open-Meteo harian Salatiga (n=3154, akurasi latih 0,59 vs base rate ~0,50) |
+| Human in the loop | UI konfirmasi + flag `needs_review` | Petani/petugas mengonfirmasi irigasi dan daun; pompa tidak diaktuasi. Flag review hujan **hanya** jika LogReg vs BMKG tidak sama atau P(wet) 0,35–0,65. HITL ≠ model |
 | Akuntansi karbon | `apps/api/app/irrigation/ipcc.py` | Receipt IPCC Tier-1: EF 1,30 (Tbl 5.11), SF_w 1/0,78 (Tbl 5.12), GWP 27 (AR6); label `simulated \| measured \| projected` |
 | Cuaca | `apps/api/app/irrigation/weather_bmkg.py` + `bmkg_areas.py` | Prakiraan BMKG per kelurahan (`adm4`). Katalog 83.763 kode dari PDF part 1-4 dimuat ke tabel `bmkg_areas`. Default demo: Kelurahan Salatiga `33.73.01.1003` |
 | Vision pipeline (Pilar 2) | `apps/api/app/vision/{crop_packs,image_guard,inference,advisory,severity}.py` | Image guard (kualitas + penolakan non-daun; rule tekstur entropy ≥3,0) → inferensi ONNX di CPU → severity + advisory dwibahasa ID/EN |
@@ -49,7 +50,8 @@ sequenceDiagram
     N->>API: POST /api/ingest (dist_cm)
     API->>API: level dari pipe zero → protocol.stage_on(day)
     API->>W: prakiraan hujan 72 jam
-    API->>API: scheduler.decide(level, stage, rain72 BMKG) ; LogReg HITL hanya flag UI
+    API->>API: scheduler.decide(level, stage, rain72 BMKG)
+    API->>API: LogReg second opinion; HITL flag to UI if they disagree
     API->>DB: reading + decision (+ irrigation) + receipt IPCC Tier-1
     U->>NX: buka dashboard, unggah foto daun, chat asisten
     NX->>API: rewrite /api/* → :8000
@@ -78,8 +80,10 @@ sequenceDiagram
   `simulated | measured | projected`; angka eksperimen dilaporkan sebagai
   `[simulated]` sampai tervalidasi lapangan. Angka literatur (Carrijo,
   Lampayan, Zhao) adalah agregat lapangan terpisah, bukan petak demo.
-- **Rain HITL**: LogReg persistensi tidak boleh men-skip irigasi. Genangan
-  dangkal (≥ 0 cm, < 15 cm) tidak `DRAIN` di luar panen. Genangan ≥ 15 cm
+- **Rain LogReg vs HITL**: LogReg adalah model opini kedua; HITL adalah
+  manusia yang mengonfirmasi (irigasi, daun, dan flag review jika LogReg
+  ≠ BMKG). LogReg tidak boleh men-skip irigasi. Genangan dangkal
+  (≥ 0 cm, < 15 cm) tidak `DRAIN` di luar panen. Genangan ≥ 15 cm
   memakai `LOWER_POND` (turun ke +5 cm jika ada saluran), bukan keringkan
   ke pemicu AWD.
 - **Offline ladder**: LLM online (DeepSeek, tool-calling ≤6 hop, 30 s) → jika

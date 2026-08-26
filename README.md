@@ -36,8 +36,9 @@ flowchart LR
    rain-aware scheduler, store the decision, expose the E3 season receipt
    (IPCC 2006 Tier-1 CH4, AR6 GWP100 = 27). BMKG rain72 may only *hold*
    irrigation above a hard floor. A persistence logistic regression
-   (`apps/api/app/irrigation/rain_hitl.py`) is a second opinion for human
-   review; it never changes `rain72` that enters `decide()`. If the table is
+   (`rain_logreg.json`) is a second opinion only; it never changes `rain72`
+   that enters `decide()`. Human in the loop is separate: a person confirms
+   irrigation and leaf calls, and reviews rain when LogReg and BMKG disagree. If the table is
    already at or above 0 cm but still a shallow pond, the action is WAIT
    ("Do not drain"). If the pond is already ≥ 15 cm, `LOWER_POND`: lower
    toward +5 cm if a drain exists so leaves stay in air; do not dry to

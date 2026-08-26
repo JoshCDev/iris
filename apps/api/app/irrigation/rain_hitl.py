@@ -1,8 +1,9 @@
-"""Logistic-regression second opinion on 72 h wetness, for human review.
+"""Rain LogReg second opinion, plus a human-review flag.
 
-BMKG remains the scheduler input. This model never forces HOLD_FOR_RAIN.
-It flags cases where persistence/climatology disagrees with the forecast
-or the probability sits in an uncertain band (human in the loop).
+The logistic regression is not HITL. HITL is the person who confirms.
+This module scores P(wet) and sets needs_review when that score disagrees
+with BMKG or sits in an uncertain band. BMKG remains the scheduler input.
+This model never forces HOLD_FOR_RAIN.
 
 Weights are fit offline on Open-Meteo daily precipitation for Salatiga
 (see experiments/train_rain_logreg.py) and stored in rain_logreg.json.

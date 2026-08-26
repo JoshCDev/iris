@@ -22,6 +22,7 @@
   didokumentasikan kanonik di `docs/METHODOLOGY.md` (bagian kebijakan
   rain-hold scheduler), termasuk **Do not drain** pada genangan AWD dangkal
   dan **LOWER_POND** jika muka air ≥ 15 cm (relief banjir ke +5 cm, bukan
-  keringkan ke −15 cm). LogReg HITL tidak mengubah `rain72`.
+  keringkan ke −15 cm). LogReg (opini kedua) tidak mengubah `rain72`.
+  HITL adalah konfirmasi manusia, termasuk flag review jika LogReg ≠ BMKG.
 - Klaim E3 dilabeli `[simulated]`. Angka literatur (Carrijo/Lampayan/Zhao)
   adalah agregat lapangan terpisah; jangan dicampur ke baris E3.

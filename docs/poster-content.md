@@ -1,6 +1,6 @@
 # IRIS poster copy: INOVATALK 2026
 
-A1 portrait. Body text in English. IEEE in-text citations (`[1]`, `[2]`). One source per reference number.
+A1 portrait. Body text in English. IEEE in-text citations (`[1]`, `[2]`). One source per reference number. Do not use em dashes.
 
 ---
 
@@ -14,7 +14,7 @@ IRIS - Intelligent Rice Integrated System
 
 ## Subtitle
 
-AIoT sensing on one plot, ending in a smart decision the farmer confirms
+Rain-aware AWD, canopy-anomaly triage, and a plot assistant - on one plot
 
 ## Authors
 
@@ -26,62 +26,53 @@ Department of Informatics, Universitas Kristen Maranatha
 
 ## 1. Problem
 
-In 2024 Indonesia harvested 10.05 million hectares of paddy and produced 53.14 million tonnes of milled dry unhusked grain (GKG) [1]. The usual way to grow that crop - keeping the field flooded - is also why irrigated rice is a major agricultural source of methane. IPCC AR6 assigns non-fossil CH₄ a GWP100 of 27 [2].
+In 2024 Indonesia harvested 10.05 million hectares of paddy and produced 53.14 million tonnes of dry unhusked paddy (GKG) [1]. The usual way to grow that crop - keeping the field flooded - is also why irrigated rice is a major agricultural source of methane. IPCC AR6 assigns non-fossil CH₄ a GWP100 of 27 [2].
 
-The agronomic reply is already on the shelf. IRRI’s safe alternate wetting and drying (AWD) protocol lets the water table fall to 15 cm below the soil surface, then refills the field to about 5 cm, and holds a flood through flowering [3]. At that threshold a meta-analysis reports 23.4% less irrigation water with no meaningful yield loss [5]; adoption studies in Asia report cuts of up to 38% when the protocol is followed [4]. A greenhouse-gas meta-analysis finds CH₄ down 51.6% versus continuous flooding, with N₂O up 44.0% [6]. The science is not the missing piece.
+The agronomic reply is already on the shelf. IRRI’s safe alternate wetting and drying (AWD) protocol lets the water table fall to 15 cm below the soil surface, then refills the field to about 5 cm, and holds a flood from one week before to one week after flowering [3]. Under mild (safe) AWD a meta-analysis reports 23.4% less water use, with no significant yield loss in most circumstances [5]; adoption studies in Asia report irrigation-input cuts of up to 38% when the protocol is followed [4]. A greenhouse-gas meta-analysis finds CH₄ down 51.6% versus continuous flooding, with N₂O up 44.0% [6]. The science is not the missing piece.
 
-What stalls in the field is the watch. Safe AWD still depends on reading a perforated field water tube [3], [4], and leaf stress is often noticed only after damage is advanced. Both jobs sit on the same plot. That is the gap software can close.
+What stalls in the field is the watch. Safe AWD still depends on reading a perforated field water tube [3], and leaf stress is often noticed only after damage is advanced. Both jobs sit on the same plot. That is the gap software can close.
 
 ## 2. Approach
 
-IRIS is AIoT for one plot: a pipe reading, a leaf photograph, and a BMKG forecast land in the same record. The agronomy is IRRI safe AWD [3], not a new cultivation method. **The novelty is the smart decision at the end of that loop**, not a new CNN and not a new IPCC factor.
+IRIS is a web application for that plot. It does not invent a new cultivation method. It runs the existing safe-AWD protocol, reads the canopy for anomalies, and answers from the same records. A person remains in the loop: the system recommends, and the farmer or extension officer acts.
 
-**Defence (why this is not “just another IoT dashboard”).** Sensing without a closed decision is telemetry. IRIS turns three noisy signals into one recommendation with fail-closed rules: (i) the live water table is the safety constraint; (ii) rain may only *hold* irrigation above a hard floor, and a persistence LogReg flags BMKG disagreement for a person; (iii) low-confidence leaf photos are rejected; (iv) pumps are not actuated. A juror asking “what if the AI is wrong?” is answered by that loop: the system recommends, a human confirms.
+1. Irrigation follows growth stage: establishment, vegetative AWD, flowering flood, grain fill, and harvest. If the BMKG forecast is ≥15 mm of rain within 72 h [12], irrigation is deferred unless the water table is already near a dry hard floor (trigger minus 10 cm). Establishment and flowering stay flooded. A sensor ingest API is in place; field hardware has not been tested.
 
-1. Irrigation follows growth stage: establishment, vegetative AWD, flowering flood, grain fill, and harvest. The live water table is the safety constraint. If the forecast is ≥15 mm of rain within 72 h [12], irrigation may be deferred only while the table is still above a hard floor (trigger minus 10 cm). A persistence logistic regression, fit on Open-Meteo daily rain for Salatiga, is a *second opinion* only: it never skips irrigation by itself. When it disagrees with BMKG, or P(wet) is in 0.35–0.65, the UI asks for human review. A wrong forecast is corrected at the next reading. Prolonged rain does not trigger an AWD dry-down: if the table is already at or above 0 cm but still a shallow pond (< 15 cm), the action is WAIT with “Do not drain”. An IRRI refill of about +5 cm [3] leaves the leaves in air, so gas exchange and light continue; that is not canopy submergence. If the pond is already ≥ 15 cm, the action is `LOWER_POND`: lower toward +5 cm if a drain exists (flood relief, not harvest drain). Waiting only for evaporation is too slow at that depth. `DRAIN` is harvest only. Field hardware has not been tested.
+2. Five leaf classes (four diseases plus healthy) are recognised with MobileNetV3-Large [9] and then scored against the plot’s water and weather through explicit rules. That combination is the anomaly signal, not the photo class alone. Low-confidence photographs may be rejected. No end-to-end fusion model is used.
 
-2. Five leaf classes (four diseases plus healthy) are recognised with MobileNetV3-Large [9] and then scored against the plot’s water and weather through explicit rules. That combination is the anomaly signal - not the photo class alone. The worked example is hypothetical. No end-to-end fusion model is used. Low-confidence photographs are rejected.
-
-3. The assistant answers in Indonesian from plot data and cited sources. If the language-model endpoint is down, it searches the plot status text. Pesticide doses are not recommended. Pumps are not actuated; a person confirms every irrigation and leaf call (human in the loop).
+3. The assistant answers from plot data and a knowledge base. It replies in Indonesian when the user writes Indonesian. If the language-model endpoint is down, it retrieves from that knowledge base and appends the latest plot status. Pesticide doses are not recommended.
 
 ## 3. Methods
 
-Water use and CH₄ come from a 100-day water-balance simulation (0 mm rain, 0.8 cm day⁻¹ drawdown, 1 ha). Sensor calibration and a mesocosm trial remain protocol only; no field data have been collected.
+Water use and CH₄ come from a 100-day water-balance simulation (0 mm rain, 0.8 cm day⁻¹ drawdown, 1 ha). Drawdown is halved while the table is below 0 cm. That run uses stage triggers and refill to +5 cm only; it does not apply the live rain-hold rule. Sensor calibration and a mesocosm trial remain protocol only; no field data have been collected.
 
-The image classifier was trained on public rice-leaf photographs (four diseases plus healthy) [10], [11]. Held-out accuracy on that public mix is 97.8%; Indonesian field leaves have not been measured, so that figure is not a field claim.
+The image classifier was trained on public rice-leaf photographs: Mendeley samples of four diseases [10], [11] and Paddy Doctor field photographs for the overlapping classes, including healthy leaves [13]. Indonesian field leaves have not been measured.
 
-Emissions follow IPCC 2006 Tier 1 [7]: CH₄ = EF_c · t · A, with EF_c = EF_base · SF_w · SF_p · SF_o. We use EF_base = 1.30 kg ha⁻¹ day⁻¹ (Table 5.11) and SF_w = 1.00 (continuous flooding) or 0.78 (multiple aeration; Table 5.12). The effective SF_w of 0.8922 is a linear interpolation between 1.00 and 0.78 by the flooded-day fraction. That interpolation is a project assumption, not an IPCC equation. GWP100 = 27 [2]. N₂O is omitted, so the CO₂e figure is an upper bound. The 2019 Refinement sets SF_w for AWD at 0.55 [8]; the 2006 chain used here is the more conservative claim.
+A logistic regression on Open-Meteo historical daily rainfall for Salatiga (1 Jan. 2018–26 Aug. 2026; *n* = 3,154) [14] estimates whether day *i* plus the next two days sum to ≥15 mm. In-sample accuracy is 0.5891 versus a wet base rate of 0.5022; there is no held-out test. That score is never used to withhold irrigation. The scheduler still uses the BMKG 72 h total [12]. If the score disagrees with BMKG, or lies between 0.35 and 0.65, the interface flags the forecast for human review.
+
+Emissions follow IPCC 2006 Tier 1 [7]: seasonal CH₄ = 1.30 · SF_w · *t* · *A* kg (SF_p = SF_o = 1). Continuous flooding uses SF_w = 1.00. The effective SF_w of 0.8922 interpolates 1.00 and the 2006 aggregated irrigated factor 0.78 by the flooded-day fraction (51/100). That interpolation is a project assumption, not an IPCC equation, and not the 2006 multiple-aeration factor 0.52. GWP100 = 27 [2]. N₂O is omitted, so the CO₂e figure is an upper bound on net climate benefit if N₂O rises under AWD [6]. The 2019 Refinement sets SF_w for multiple drainage at 0.55 [8]. During flowering, irrigation is triggered at or below +3 cm (refill to +5 cm). IRRI requires a flood in this window [3].
 
 ## 4. Workflow
 
-Two observations are taken on the same plot and meet in one loop. The water process records the water table, then runs the stage scheduler and the rain-hold rule. The canopy process checks a photograph and classifies it on CPU. Both feed a rule matrix, the assistant, and an emission sheet. IRIS recommends; it does not start a pump. During flowering the rain-hold rule is disabled so the flood is kept.
+Two observations are taken on the same plot and meet in one loop. The water process records the water table, then runs the stage scheduler and the rain-hold rule. A shallow pond is left to recede; at or above +15 cm the advice is to lower the water toward +5 cm if a drain exists. Drain-to-dry is harvest only. The canopy process checks a photograph and classifies it on CPU. Both feed a rule matrix and the assistant. The emission sheet shows the 100-day water-balance, not the leaf class. Pumps are not actuated; the user decides (human in the loop). During establishment and flowering the rain-hold rule is disabled so the flood is kept.
 
 ## 5. Results
 
-Two impact columns, labelled so a juror can ask which is which.
+**Headline:** −37.5% irrigation water (8,000 → 5,000 m³ ha⁻¹). CH₄ −10.8%, or 0.378 t CO₂e ha⁻¹ season⁻¹. Water-balance simulation, 100 days, 1 ha, 0 mm rain.
 
-**This prototype [simulated] - E3 water-balance, 100 days, 1 ha, 0 mm rain.** Not field measurements. Reproduce: `experiments/outputs/backtest_summary.json`.
-
-| Metric | Continuous flooding | IRIS (this run) |
+| Metric | Continuous flooding | This run (sim.) |
 | --- | --- | --- |
-| Irrigation water (m³) | 8,000 | 5,000 (−37.5%) |
+| Irrigation water (m³) | 8,000 | 5,000 |
 | Flooded days | 100 | 51 |
-| CH₄ (kg) | 130.00 | 115.99 (−10.8%) |
+| CH₄ (kg) | 130.00 | 115.99 |
 | CO₂e avoided (t) | - | 0.378 |
 | Model irrigation events | 100* | 23* |
 
-**Literature aggregate [field meta-analyses], not this plot.** Mild/safe AWD (water table not below −15 cm) cuts irrigation water 23.4% with no meaningful yield loss [5]. Adoption studies in Asia report water cuts of up to 38% when the protocol is followed [4]. Zhao et al. (2024) report CH₄ −51.6% vs continuous flooding overall, −49.4% under mild AWD, and −40.6% when drying events are ≤ 3 [6]. IPCC 2019 Table 5.12 SF_w = 0.55 for multiple drainage is a ~45% CH₄ cut vs SF_w = 1.00 [8]. Those larger CH₄ cuts need deeper or more frequent drying than this simulation, which rarely reaches −15 cm (Fig. 1). N₂O rises 44.0% under AWD [6]; our CO₂e omits N₂O and is therefore an upper bound on benefit.
+*Daily water-balance top-ups at 0.8 cm day⁻¹, not 100 farmer irrigations. The 23 events are 14 establishment plus 9 flowering; vegetative and grain-fill AWD triggers never fired. The table reached −14.6 cm and did not reach −15 cm (Fig. 1).
 
-*Irrigation events are daily water-balance outputs (0.8 cm day⁻¹), not 100 farmer irrigations and not 23 dry-down cycles to −15 cm.
+On the public image mix, held-out test accuracy of the served model is 0.9784 (*n* = 1,621; macro-F1 0.9783). Indonesian field leaves have not been measured.
 
-**Headline for the poster (this prototype only, [simulated]):** −37.5% water, CH₄ −10.8%, 0.378 t CO₂e ha⁻¹. Stand next to the literature column; do not mix the labels.
-
-| Label | What it is | Water vs CF | CH₄ vs CF |
-| --- | --- | --- | --- |
-| This prototype `[simulated]` | E3 water-balance, 100 days, 1 ha, 0 mm rain | −37.5% (8,000 → 5,000 m³) | −10.8% (130.00 → 115.99 kg); 0.378 t CO₂e |
-| Literature aggregate `[field meta-analyses]` | Multi-site trials, not this plot | Mild/safe AWD −23.4% [5]; adoption up to −38% [4] | Mild AWD −49.4%; overall −51.6%; ≤3 drying events −40.6% [6]. IPCC 2019 SF_w 0.55 is a ~45% model cut [8], not a field mean. |
-
-**Fig. 1.** Water-table trace, 100-day simulation (0 mm rain). Triangles mark irrigation events. Yellow band: flowering flood. The dashed −15 cm line is the safe-AWD trigger [3]; it is rarely reached in this run.
+**Fig. 1.** Water-table trace, 100-day simulation (0 mm rain). Triangles mark irrigation events. Yellow band: flowering flood. The dashed −15 cm line is the safe-AWD trigger [3]; it was not reached in this run.
 
 **Fig. 2.** Seasonal irrigation volume and CH₄. CH₄ difference = 14.01 kg ha⁻¹; CO₂e = 14.01 × 27 / 1000 = 0.378 t ha⁻¹ [2], [7].
 
@@ -89,19 +80,15 @@ Chart files: `assets/poster/chart_water_trace.png`, `assets/poster/chart_results
 
 ## 6. Prototype
 
-Working software (Next.js and FastAPI), one demonstration plot labelled Salatiga. That plot is a prototype walkthrough, not a field trial. Irrigation, canopy triage, and the assistant read the same plot record. The emission sheet shows the simulation figures in the table, not the 30-day demo window. Five leaf classes run on CPU.
-
-**Human in the loop.** Irrigation and leaf outputs are recommendations. A farmer or extension officer confirms; IRIS does not actuate a pump and does not issue a laboratory diagnosis. Low-confidence leaf photos are rejected rather than guessed.
-
-**Rain forecast.** Indonesian rainfall forecasts are uncertain. IRIS treats the BMKG 72 h total [12] as a supporting factor only. A logistic regression trained on Open-Meteo daily precipitation for Salatiga (n = 3,154 days; train accuracy 0.59 vs a ~0.50 base rate) is a persistence/climatology second opinion. It never overrides the pipe or forces HOLD_FOR_RAIN. Disagreement or an uncertain probability (0.35–0.65) raises a human-review flag. The measured water table is the safety constraint: a dry hard floor still irrigates despite rain. If rain ponds the field at or above 0 cm but still shallow (< 15 cm), the recommendation is WAIT / “Do not drain”: the +5 cm AWD flood does not bury the canopy. If the pond is ≥ 15 cm, lower toward +5 cm if a drain exists (`LOWER_POND`); do not dry to the AWD trigger, and do not wait for evaporation alone. If the forecast misses, the next reading re-decides.
+The web application (Next.js and FastAPI) is organised around one demonstration plot, Sawah Demo - Salatiga. That plot is a 30-day synthetic walkthrough, not a field trial. Irrigation, canopy triage, and the assistant read the same plot record. The emission sheet shows the simulation figures in the table, not the 30-day window of the demonstration plot. Five leaf classes run on CPU. Outputs are stored when they are computed; the prototype does not log a human confirmation.
 
 ## 7. Implications
 
-Show both numbers and keep the labels. This **simulation** saves 3,000 m³ ha⁻¹ (−37.5%) and 10.8% CH₄ because the table rarely hits −15 cm. The literature aggregate in section 5 is the ceiling under deeper or more frequent drying, not a measurement from Salatiga. Field sensors, chamber CH₄, and Indonesian leaf tests have not been carried out.
+On one hectare the simulation saves 3,000 m³ of water per season (−37.5%) and cuts CH₄ by 10.8%. Relative to the mild-AWD water mean in [5], the water saving is large; relative to [6], the CH₄ saving is small, because this run did not reach −15 cm. What is available now is working software and a repeatable calculation; field measurements have not been made.
 
 ## 8. Conclusion
 
-IRIS does not replace IRRI’s safe-AWD protocol [3]. It is AIoT that ends in a smart decision on one plot: water table, rain (BMKG + LogReg HITL), leaf triage, and a person who confirms. The headline numbers on this poster come from a water-balance simulation. Field sensors, chamber CH₄ measurements, and Indonesian leaf-image tests have not been carried out.
+IRIS does not replace IRRI’s safe-AWD protocol [3]. It puts that protocol, canopy-anomaly triage, and a plot assistant on the same plot, with a person in the loop, and writes water and CH₄ under IPCC Tier 1 [7]. The numbers on this poster come from a water-balance simulation. Field sensors, chamber CH₄ measurements, and Indonesian leaf-image tests have not been carried out.
 
 ---
 
@@ -130,6 +117,10 @@ IRIS does not replace IRRI’s safe-AWD protocol [3]. It is AIoT that ends in a 
 [11] P. K. Sethy, Jul. 18, 2020, “Rice Leaf Disease Image Samples,” Mendeley Data, V1, doi: 10.17632/fwcj7stb8r.1.
 
 [12] Badan Meteorologi, Klimatologi, dan Geofisika, “Data Prakiraan Cuaca Terbuka.” Accessed: Aug. 26, 2026. [Online]. Available: https://data.bmkg.go.id/prakiraan-cuaca/
+
+[13] A. Petchiammal, S. Briskline Kiruba, D. Murugan, and A. Pandarasamy, “Paddy Doctor: A visual image dataset for automated paddy disease classification and benchmarking,” in *Proc. 6th Joint Int. Conf. Data Sci. Manage. Data (CODS-COMAD)*, Mumbai, India, Jan. 4–7, 2023, pp. 203–207, doi: 10.1145/3570991.3570994.
+
+[14] P. Zippenfenig, “Open-Meteo.com Weather API,” Zenodo, 2023, doi: 10.5281/zenodo.7970649.
 
 ---
 
