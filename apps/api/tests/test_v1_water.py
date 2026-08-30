@@ -76,3 +76,18 @@ def test_unavailable_weather_forces_recheck(tmp_path, monkeypatch):
     assert body["weather"]["availability"] == "unavailable"
     assert body["weather"]["rain72_mm"] is None
     assert body["recommendation"]["action"] == "RECHECK_REQUIRED"
+
+
+def test_water_history_paginates(tmp_path, monkeypatch):
+    c = _client(tmp_path, monkeypatch, rain=6.5)
+    with db.session_scope() as conn:
+        pid = db.create_plot(conn, name="Petak",
+                             transplant_date="2026-07-01", is_demo=False)
+    for level in (-15.2, -8.0, -5.0):
+        c.post(f"/api/v1/plots/{pid}/water-observations",
+               json={"level_cm": level, "source": "manual"})
+    body = c.get(f"/api/v1/plots/{pid}/water-history?limit=2").json()
+    assert body["total"] == 3
+    assert len(body["observations"]) == 2
+    assert len(body["recommendations"]) == 2
+    assert body["observations"][0]["level_cm"] == -5.0  # newest first

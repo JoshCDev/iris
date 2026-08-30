@@ -125,6 +125,42 @@ def plot_today(plot_id: int):
         return _today_payload(conn, plot)
 
 
+@router.get("/{plot_id}/water-history")
+def water_history(plot_id: int, limit: int = 20, offset: int = 0):
+    limit = max(1, min(int(limit), 100))
+    offset = max(0, int(offset))
+    with db.session_scope() as conn:
+        plot = db.get_plot(conn, plot_id)
+        if plot is None:
+            raise HTTPException(status_code=404,
+                                detail={"code": "plot_not_found",
+                                        "message": "plot not found"})
+        total = conn.execute(
+            "SELECT COUNT(*) AS n FROM water_observations WHERE plot_id = ?",
+            (plot_id,)).fetchone()["n"]
+        obs = [
+            {"id": int(o["id"]), "level_cm": float(o["level_cm"]),
+             "source": o["source"], "observed_at": o["observed_at"],
+             "received_at": o["received_at"],
+             "quality_state": o["quality_state"], "demo": bool(o["demo"])}
+            for o in conn.execute(
+                "SELECT * FROM water_observations WHERE plot_id = ?"
+                " ORDER BY id DESC LIMIT ? OFFSET ?",
+                (plot_id, limit, offset)).fetchall()]
+        recs = [
+            {"id": int(r["id"]), "action": r["action"],
+             "reason_codes": json.loads(r["reason_codes"]),
+             "ruleset_version": r["ruleset_version"],
+             "created_at": r["created_at"], "superseded_at": r["superseded_at"],
+             "needs_review": bool(r["needs_review"])}
+            for r in conn.execute(
+                "SELECT * FROM recommendations WHERE plot_id = ?"
+                " ORDER BY id DESC LIMIT ? OFFSET ?",
+                (plot_id, limit, offset)).fetchall()]
+    return {"plot_id": plot_id, "observations": obs,
+            "recommendations": recs, "total": int(total)}
+
+
 @router.post("/{plot_id}/water-observations")
 def post_water_observation(plot_id: int, body: WaterObservationIn):
     with db.session_scope() as conn:
