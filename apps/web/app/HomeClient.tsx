@@ -1,68 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { Icon } from "@/components/Icon";
 import { PillarCard } from "@/components/PillarCard";
-import { usePlot } from "@/lib/PlotContext";
-import { actionVerb } from "@/lib/format";
-
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) {
-    return <span className="sparkline sparkline--empty">Waiting for sensor data…</span>;
-  }
-  const w = 220;
-  const h = 44;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const pts = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * w;
-    const y = h - 4 - ((v - min) / span) * (h - 8);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  return (
-    <svg
-      className="sparkline"
-      viewBox={`0 0 ${w} ${h}`}
-      role="img"
-      aria-label="Water-level sparkline, last 12 hours"
-    >
-      <polyline
-        points={pts.join(" ")}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 export function HomeFacets({ askHref, leafHref }: { askHref: string; leafHref: string }) {
-  const { status, history } = usePlot();
-  const last48 = (history?.readings ?? []).slice(-48).map((r) => r.level_cm);
-
   return (
     <div className="grid grid--3">
       <PillarCard
         icon="droplet"
         title="Water"
-        desc={
-          status
-            ? `Today: ${actionVerb(status.action)}. Recommendation only. The pipe is the safety constraint; rain may hold irrigation, not drain a shallow pond.`
-            : "Water-level sensing and rain-aware AWD rules for this plot."
-        }
+        desc="Water-level sensing and rain-aware AWD rules for this plot. The pipe is the safety constraint; rain may hold irrigation, not drain a shallow pond."
         href="/water"
         cta="Open water"
         proof={
-          <>
-            <Sparkline values={last48} />
-            <span className="pillar-card__figure">
-              Recommendation only
-              <small>Defined simulation lives on Evidence</small>
-            </span>
-          </>
+          <span className="pillar-card__figure">
+            Irrigation guidance
+            <small>Recorded levels and rules on Water</small>
+          </span>
         }
       />
       <PillarCard
@@ -71,14 +25,7 @@ export function HomeFacets({ askHref, leafHref }: { askHref: string; leafHref: s
         desc="A leaf photograph is classified, then scored against this plot's water and weather. The class alone is not an irrigation decision."
         href="/health"
         cta="Check leaf"
-        proof={
-          <span className="vision-mini">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/demo_samples/rice/rice-blast-demo.jpg" alt="" />
-            <Icon name="send" size={20} className="vision-mini__arrow" />
-            <span className="pill pill--warn">Photo × plot water</span>
-          </span>
-        }
+        proof={<span className="pill pill--warn">Photo × plot water</span>}
       />
       <PillarCard
         icon="chat"
@@ -89,7 +36,7 @@ export function HomeFacets({ askHref, leafHref }: { askHref: string; leafHref: s
         proof={
           <span className="chat-mini">
             <span className="chat-mini__q">Why this water action today?</span>
-            <span className="chat-mini__a">Answered from water level, rain, and leaf class when present. Tool steps are listed.</span>
+            <span className="chat-mini__a">Answered from water level, rain, and leaf class when present.</span>
             <Link className="chat-mini__tool" href={leafHref}>
               Or ask about the leaf →
             </Link>

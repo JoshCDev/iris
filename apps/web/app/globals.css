@@ -1125,6 +1125,38 @@ video {
   font-size: 1.5rem;
 }
 
+/* ── Recommendation card (Today) ──────────────────────────────────────── */
+.recommendation-card {
+  display: grid;
+  gap: 14px;
+}
+
+.recommendation-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.recommendation-card__head h2 {
+  margin: 0;
+  color: var(--field-950);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.5rem, 2.4vw, 1.9rem);
+}
+
+.recommendation-card__reason {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+.recommendation-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 /* ── Receipt card ──────────────────────────────────────────────────────── */
 .receipt-card {
   border: 1px solid rgba(95, 159, 62, 0.35);
