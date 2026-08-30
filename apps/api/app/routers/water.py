@@ -20,6 +20,7 @@ from app.irrigation.protocol import stage_on
 from app.irrigation.scheduler import decide
 from app.weather.snapshots import (
     capture_weather_snapshot,
+    latest_weather_snapshot,
     weather_state_payload,
 )
 
@@ -123,6 +124,26 @@ def plot_today(plot_id: int):
                                 detail={"code": "plot_not_found",
                                         "message": "plot not found"})
         return _today_payload(conn, plot)
+
+
+@router.get("/{plot_id}/weather")
+def plot_weather(plot_id: int):
+    from app.irrigation.rain_hitl import weather_payload
+
+    with db.session_scope() as conn:
+        plot = db.get_plot(conn, plot_id)
+        if plot is None:
+            raise HTTPException(status_code=404,
+                                detail={"code": "plot_not_found",
+                                        "message": "plot not found"})
+        state = weather_state_payload(conn, plot_id)
+        snap = latest_weather_snapshot(conn, plot_id)
+        if snap is not None and snap.availability != "unavailable":
+            hitl = weather_payload(float(snap.rain72_mm or 0.0), False)
+        else:
+            hitl = None
+        state["hitl"] = hitl
+        return state
 
 
 @router.get("/{plot_id}/water-history")

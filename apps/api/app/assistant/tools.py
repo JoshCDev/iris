@@ -76,9 +76,10 @@ TOOLS: list[dict[str, Any]] = [
     {"type": "function", "function": {
         "name": "get_plot_status",
         "description": (
-            "Current rice-plot status: water level (cm), growth stage, "
-            "irrigation action, 72-hour rain, and next check time. "
-            "Without plot_id, uses the plot with the latest reading."),
+            "Current rice-plot Today status: water level (cm), growth stage, "
+            "stored irrigation action + reason codes, confirmation state, "
+            "and 72-hour rain. Explain the stored records; do not recompute "
+            "a decision. Without plot_id, uses the first registered plot."),
         "parameters": {"type": "object", "properties": {
             "plot_id": {"type": "integer",
                         "description": "Plot ID (optional)"},
@@ -86,7 +87,11 @@ TOOLS: list[dict[str, Any]] = [
     }},
     {"type": "function", "function": {
         "name": "get_weather",
-        "description": "72-hour BMKG rain forecast plus a persistence LogReg second opinion (HITL flag if they disagree). Scheduler still uses BMKG only.",
+        "description": (
+            "Stored weather snapshot for the plot: availability "
+            "(fresh/stale-cache/unavailable), 72-hour rain, and a "
+            "persistence second opinion (HITL flag). Rain is never "
+            "fabricated; when unavailable, say the data is unavailable."),
         "parameters": {"type": "object", "properties": {}, "required": []},
     }},
     {"type": "function", "function": {
@@ -167,15 +172,15 @@ def args_summary(args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 def get_plot_status(plot_id: int | None = None) -> dict[str, Any]:
+    """Return the v1 Today payload: stored recommendation + confirmation
+    state. The assistant explains records; it never computes a decision."""
     from app.db import get_plot, session_scope
+    from app.routers.water import _today_payload
 
     with session_scope() as conn:
         if plot_id is None:
             row = conn.execute(
-                "SELECT p.id AS id FROM plots p"
-                " LEFT JOIN readings r ON r.plot_id = p.id"
-                " GROUP BY p.id ORDER BY MAX(r.ts) DESC, p.id ASC LIMIT 1",
-            ).fetchone()
+                "SELECT id FROM plots ORDER BY id ASC LIMIT 1").fetchone()
             if row is None:
                 return {"error": "no plots registered yet"}
             plot_id = int(row["id"])
@@ -184,32 +189,27 @@ def get_plot_status(plot_id: int | None = None) -> dict[str, Any]:
         plot = get_plot(conn, plot_id)
         if plot is None:
             return {"error": f"plot {plot_id} not found"}
-        from app.main import _status_payload
-        return _status_payload(conn, plot)
+        return _today_payload(conn, plot)
 
 
 def get_weather() -> dict[str, Any]:
+    """Return the stored weather state; never fabricate a 0 mm value."""
     from app.db import session_scope
-    from app.irrigation.weather_bmkg import fetch_forecast_72h_rain
+    from app.weather.snapshots import latest_weather_snapshot, weather_state_payload
 
-    adm4 = None
-    try:
-        with session_scope() as conn:
-            row = conn.execute(
-                "SELECT bmkg_adm4 FROM plots WHERE bmkg_adm4 IS NOT NULL"
-                " AND trim(bmkg_adm4) != '' ORDER BY id ASC LIMIT 1"
-            ).fetchone()
-            if row is not None:
-                adm4 = row["bmkg_adm4"]
-    except Exception:
-        adm4 = None
-    try:
-        rain = fetch_forecast_72h_rain(adm4=adm4)
-        from app.irrigation.rain_hitl import weather_payload
-        return weather_payload(round(float(rain), 1), False)
-    except Exception:
-        from app.irrigation.rain_hitl import weather_payload
-        return weather_payload(0.0, True)
+    with session_scope() as conn:
+        row = conn.execute(
+            "SELECT id FROM plots ORDER BY id ASC LIMIT 1").fetchone()
+        if row is None:
+            return {"error": "no plots registered yet"}
+        state = weather_state_payload(conn, int(row["id"]))
+        snap = latest_weather_snapshot(conn, int(row["id"]))
+        if snap is not None and snap.availability != "unavailable":
+            from app.irrigation.rain_hitl import weather_payload
+            state["hitl"] = weather_payload(float(snap.rain72_mm or 0.0), False)
+        else:
+            state["hitl"] = None
+        return state
 
 
 def run_vision_triage(image_ref: str) -> dict[str, Any]:

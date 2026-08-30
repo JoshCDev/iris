@@ -76,6 +76,12 @@ def _text_response(text):
 
 @pytest.fixture
 def seeded_db(tmp_path):
+    from app.db_l1 import (
+        insert_recommendation,
+        insert_water_observation,
+        insert_weather_snapshot_row,
+    )
+
     db.init_db(f"sqlite:///{(tmp_path / 'agent.db').as_posix()}")
     now = datetime.now(timezone.utc).isoformat()
     transplant = (date.today() - timedelta(days=30)).isoformat()
@@ -87,6 +93,20 @@ def seeded_db(tmp_path):
         db.insert_decision(conn, plot_id=pid, ts=now, stage="veg_awd",
                            level_cm=-15.0, action="IRRIGATE",
                            reason_id="Ambang safe-AWD tercapai", rain72_mm=0.0)
+        # v1 rows: the assistant grounds on stored L1 records (AST-002).
+        obs_id = insert_water_observation(
+            conn, plot_id=pid, source="manual", level_cm=-15.0,
+            observed_at=now, received_at=now, quality_state="ok")
+        snap_id = insert_weather_snapshot_row(
+            conn, plot_id=pid, source="BMKG", adm4=None,
+            fetched_at=now, window_end=now, rain72_mm=0.0,
+            availability="fresh", demo=False)
+        insert_recommendation(
+            conn, plot_id=pid, observation_id=obs_id,
+            weather_snapshot_id=snap_id, stage="veg_awd",
+            action="IRRIGATE", reason_codes=json.dumps(["awd_threshold"]),
+            ruleset_version="safe-awd-v1", created_at=now,
+            needs_review=False, demo=False)
     return pid
 
 
@@ -100,8 +120,8 @@ def test_status_question_triggers_tool_and_grounded_reply(seeded_db):
         if last.get("role") == "tool":
             data = json.loads(last["content"])
             return _text_response(
-                f"Level air petak Anda {data['level_cm']:+.1f} cm; "
-                f"tindakan: {data['action']}.")
+                f"Level air petak Anda {data['water']['level_cm']:+.1f} cm; "
+                f"tindakan: {data['recommendation']['action']}.")
         return _tool_call_response("get_plot_status", {})
 
     out = agent.chat("s1", MESSAGES, client=FakeClient(responder))

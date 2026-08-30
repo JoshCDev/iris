@@ -1,11 +1,16 @@
 """Tool handler tests - all against a seeded tmp db, no network."""
-import sys
+import json
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
 from app import db
 from app.assistant import tools
+from app.db_l1 import (
+    insert_recommendation,
+    insert_water_observation,
+    insert_weather_snapshot_row,
+)
 
 
 def _seed_plot(name="Sawah Uji", level=-12.0, action="WAIT",
@@ -21,6 +26,20 @@ def _seed_plot(name="Sawah Uji", level=-12.0, action="WAIT",
         db.insert_decision(conn, plot_id=pid, ts=now, stage=stage,
                            level_cm=level, action=action,
                            reason_id="uji", rain72_mm=rain72)
+        # v1 rows: the assistant grounds on stored L1 records (AST-002).
+        obs_id = insert_water_observation(
+            conn, plot_id=pid, source="manual", level_cm=level,
+            observed_at=now, received_at=now, quality_state="ok")
+        snap_id = insert_weather_snapshot_row(
+            conn, plot_id=pid, source="BMKG", adm4=None,
+            fetched_at=now, window_end=now, rain72_mm=rain72,
+            availability="fresh", demo=False)
+        insert_recommendation(
+            conn, plot_id=pid, observation_id=obs_id,
+            weather_snapshot_id=snap_id, stage=stage, action=action,
+            reason_codes=json.dumps(["uji"]),
+            ruleset_version="safe-awd-v1", created_at=now,
+            needs_review=False, demo=False)
     return pid
 
 
@@ -32,21 +51,29 @@ def seeded_db(tmp_path):
 
 # --- get_plot_status ---------------------------------------------------------
 
-def test_get_plot_status_returns_pinned_keys(seeded_db):
+PINNED_TODAY_KEYS = {"plot", "freshness", "water", "weather",
+                     "recommendation", "latest_leaf"}
+
+
+def test_get_plot_status_returns_v1_today_payload(seeded_db):
     out = tools.get_plot_status()
     assert "error" not in out
-    for key in ("plot_id", "name", "level_cm", "stage", "stage_days",
-                "action", "reason_id", "rain72_mm", "next_check",
-                "last_ts", "is_demo"):
-        assert key in out
-    assert out["plot_id"] == seeded_db
-    assert out["level_cm"] == -12.0
-    assert out["action"] == "WAIT"
+    assert set(out.keys()) == PINNED_TODAY_KEYS
+    assert out["plot"]["id"] == seeded_db
+    assert out["plot"]["name"] == "Sawah Uji"
+    assert out["water"]["level_cm"] == -12.0
+    assert out["water"]["source"] == "manual"
+    # Stored recommendation, not a recomputed decision (AST-002).
+    assert out["recommendation"]["action"] == "WAIT"
+    assert out["recommendation"]["reason_codes"] == ["uji"]
+    assert out["recommendation"]["confirmation_state"] == "pending"
+    assert out["weather"]["availability"] == "fresh"
+    assert out["weather"]["rain72_mm"] == 0.0
 
 
 def test_get_plot_status_by_explicit_id(seeded_db):
     out = tools.get_plot_status(plot_id=seeded_db)
-    assert out["name"] == "Sawah Uji"
+    assert out["plot"]["name"] == "Sawah Uji"
 
 
 def test_get_plot_status_unknown_plot(seeded_db):
@@ -60,31 +87,32 @@ def test_get_plot_status_no_plots(tmp_path):
 
 # --- get_weather -------------------------------------------------------------
 
-def test_get_weather_ok(monkeypatch, seeded_db):
-    from app.irrigation import weather_bmkg as w
-
-    monkeypatch.setattr(w, "fetch_forecast_72h_rain", lambda *a, **k: 17.5)
+def test_get_weather_returns_stored_fresh_state(monkeypatch, seeded_db):
     monkeypatch.setattr("app.irrigation.rain_hitl.fetch_recent_precip",
                         lambda *a, **k: (0.0, 0.0, "doy_only"))
     out = tools.get_weather()
-    assert out["rain72_mm"] == 17.5
-    assert out["stale"] is False
-    assert "hitl" in out
-
-
-def test_get_weather_fail_open(monkeypatch, seeded_db):
-    from app.irrigation import weather_bmkg as w
-
-    def boom(*args, **kwargs):
-        raise RuntimeError("offline")
-
-    monkeypatch.setattr(w, "fetch_forecast_72h_rain", boom)
-    monkeypatch.setattr("app.irrigation.rain_hitl.fetch_recent_precip",
-                        lambda *a, **k: (0.0, 0.0, "doy_only"))
-    out = tools.get_weather()
+    assert out["availability"] == "fresh"
     assert out["rain72_mm"] == 0.0
-    assert out["stale"] is True
+    assert "secondary_review" in out
     assert "hitl" in out
+    assert out["hitl"]["rain72_mm"] == 0.0
+    assert out["hitl"]["hitl"]["bmkg_rain72_mm"] == 0.0
+
+
+def test_get_weather_unavailable_never_zero(monkeypatch, seeded_db):
+    from app.db_l1 import insert_weather_snapshot_row
+
+    now = datetime.now(timezone.utc).isoformat()
+    with db.session_scope() as conn:
+        insert_weather_snapshot_row(
+            conn, plot_id=seeded_db, source="BMKG", adm4=None,
+            fetched_at=now, window_end=now, rain72_mm=None,
+            availability="unavailable", stale_since=now, demo=False)
+    out = tools.get_weather()
+    assert out["availability"] == "unavailable"
+    assert out["rain72_mm"] is None  # never fabricated as 0 mm
+    assert out["hitl"] is None
+    assert out["secondary_review"]["needs_review"] is True
 
 
 # --- search_kb ---------------------------------------------------------------
