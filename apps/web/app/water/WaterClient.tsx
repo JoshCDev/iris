@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { CrossLinks } from "@/components/CrossLinks";
 import { DemoBadge } from "@/components/DemoBadge";
@@ -23,6 +23,8 @@ import {
   type PlotStatus,
   type WeatherForecast,
 } from "@/lib/api";
+import { postV1WaterObservation } from "@/lib/api/v1";
+import { useLocale } from "@/lib/i18n";
 import {
   actionMeta,
   actionVerb,
@@ -35,8 +37,59 @@ import {
   STAGE_META,
 } from "@/lib/format";
 
+export function WaterEntryForm({ plotId, onSaved }: { plotId: number; onSaved: () => void }) {
+  const { t } = useLocale();
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const level = Number(value);
+    if (Number.isNaN(level) || level < -30 || level > 30) {
+      setError(t("water.implausible"));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await postV1WaterObservation(plotId, { level_cm: level, source: "manual" });
+      setValue("");
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form className="card" onSubmit={submit} aria-describedby="water-hint">
+      <h3>{t("water.manualEntry")}</h3>
+      <p id="water-hint" className="small muted">{t("water.levelHint")}</p>
+      <div className="chat-inputrow">
+        <label htmlFor="water-level">{t("water.manualEntry")} (cm)</label>
+        <input
+          id="water-level"
+          type="number"
+          step="0.1"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "water-error" : "water-hint"}
+        />
+        <button type="submit" className="button button--primary" disabled={busy}>
+          {busy ? t("assistant.sending") : t("water.save")}
+        </button>
+      </div>
+      {error && <p id="water-error" className="callout callout--danger" role="alert">{error}</p>}
+    </form>
+  );
+}
+
 export function WaterClient() {
   const plot = usePlot();
+  const { t } = useLocale();
   const leaf = latestReport(plot.reports);
   const [status, setStatus] = useState<PlotStatus | null>(null);
   const [history, setHistory] = useState<PlotHistory | null>(null);
@@ -113,6 +166,21 @@ export function WaterClient() {
           <DemoBadge />
           <span>Figures on this page are from the built-in demo plot “{status.name}”, not a production field.</span>
         </div>
+      )}
+
+      {/* Manual field-tube entry (WAT-001) — above the status/rain sections, demo simulator stays below */}
+      {plot.activePlotId === null ? (
+        <div className="card">
+          <p className="muted">{t("common.loading")}</p>
+        </div>
+      ) : (
+        <WaterEntryForm
+          plotId={plot.activePlotId}
+          onSaved={() => {
+            refresh();
+            plot.refresh();
+          }}
+        />
       )}
 
       {/* Next action + rain strip */}
