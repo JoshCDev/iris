@@ -55,5 +55,8 @@ describe("EvidenceClient", () => {
     expect(screen.getByText(/37\.5/)).toBeInTheDocument();
     expect(screen.getByText(/1,621/)).toBeInTheDocument();
     expect(screen.getByText(/-15 cm/i)).toBeInTheDocument();
+    // EVD-004 pinned values must render at full precision (no fmtNum rounding).
+    expect(screen.getByText(/115\.99/)).toBeInTheDocument();
+    expect(screen.getByText(/0\.3784/)).toBeInTheDocument();
   });
 });

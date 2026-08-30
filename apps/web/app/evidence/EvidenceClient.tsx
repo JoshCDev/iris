@@ -41,8 +41,8 @@ export function EvidenceClient() {
             <dl className="plot-card__stats">
               <div><dt>Water</dt><dd>{fmtInt(e3.values.water_cf_m3)} → {fmtInt(e3.values.water_awd_m3)} m³</dd></div>
               <div><dt>Saving</dt><dd>{fmtNum(e3.values.water_saved_pct)}%</dd></div>
-              <div><dt>CH₄</dt><dd>{fmtNum(e3.values.ch4_cf_kg)} → {fmtNum(e3.values.ch4_awd_kg)} kg</dd></div>
-              <div><dt>CO₂e</dt><dd>{fmtNum(e3.values.co2e_saved_t, 3)} t</dd></div>
+              <div><dt>CH₄</dt><dd>{fmtNum(e3.values.ch4_cf_kg, 2)} → {fmtNum(e3.values.ch4_awd_kg, 2)} kg</dd></div>
+              <div><dt>CO₂e</dt><dd>{fmtNum(e3.values.co2e_saved_t, 4)} t</dd></div>
             </dl>
             <ul>
               {e3.disclosures.map((d) => <li key={d} className="small muted">{d}</li>)}
