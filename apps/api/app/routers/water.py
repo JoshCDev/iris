@@ -1,0 +1,168 @@
+"""Plot-scoped v1 water observation + Today aggregation."""
+from __future__ import annotations
+
+import json
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Literal
+
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from app import db
+from app.db_l1 import (
+    insert_recommendation,
+    insert_water_observation,
+    latest_recommendation,
+    supersede_older_recommendations,
+)
+from app.irrigation.protocol import stage_on
+from app.irrigation.scheduler import decide
+from app.weather.snapshots import (
+    capture_weather_snapshot,
+    weather_state_payload,
+)
+
+router = APIRouter(prefix="/api/v1/plots", tags=["water"])
+
+_WIB = timezone(timedelta(hours=7))  # noqa: F821 — see note below
+RULESET_VERSION = "safe-awd-v1"
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _wib_today() -> date:
+    return datetime.now(_WIB).date()
+
+
+def _stage_days(transplant_date: date) -> int:
+    return max(0, (_wib_today() - transplant_date).days)
+
+
+def _correlation_id() -> str:
+    import uuid
+    return str(uuid.uuid4())
+
+
+def _stage_for(plot) -> str:
+    return stage_on(_stage_days(date.fromisoformat(plot["transplant_date"])))
+
+
+class WaterObservationIn(BaseModel):
+    level_cm: float
+    source: Literal["manual", "sensor", "imported", "demo", "simulation"] = "manual"
+    observed_at: str | None = None
+    raw_distance: float | None = None
+    actor: str | None = None
+
+
+def _today_payload(conn, plot) -> dict[str, Any]:
+    pid = int(plot["id"])
+    obs = conn.execute(
+        "SELECT * FROM water_observations WHERE plot_id = ?"
+        " ORDER BY id DESC LIMIT 1", (pid,)).fetchone()
+    rec = latest_recommendation(conn, pid)
+    weather = weather_state_payload(conn, pid)
+    leaf = conn.execute(
+        "SELECT * FROM leaf_assessments WHERE plot_id = ?"
+        " ORDER BY id DESC LIMIT 1", (pid,)).fetchone()
+
+    freshness = {"state": "current", "last_observed_at": None}
+    water = {"level_cm": None, "source": None, "stage": _stage_for(plot)}
+    if obs is not None:
+        freshness["last_observed_at"] = obs["observed_at"]
+        water = {"level_cm": float(obs["level_cm"]),
+                 "source": obs["source"], "stage": _stage_for(plot)}
+
+    recommendation = None
+    if rec is not None:
+        conf = conn.execute(
+            "SELECT status FROM action_confirmations"
+            " WHERE recommendation_id = ? ORDER BY id DESC LIMIT 1",
+            (rec["id"],)).fetchone()
+        recommendation = {
+            "id": int(rec["id"]),
+            "action": rec["action"],
+            "reason_codes": json.loads(rec["reason_codes"]),
+            "ruleset_version": rec["ruleset_version"],
+            "needs_review": bool(rec["needs_review"]),
+            "confirmation_state": "confirmed" if conf else "pending",
+        }
+
+    latest_leaf = None
+    if leaf is not None:
+        latest_leaf = {
+            "id": int(leaf["id"]),
+            "class": leaf["class"],
+            "confidence": (float(leaf["confidence"])
+                           if leaf["confidence"] is not None else None),
+            "severity": leaf["severity"],
+            "evidence_type": leaf["evidence_type"],
+            "created_at": leaf["created_at"],
+        }
+
+    return {
+        "plot": {"id": pid, "name": plot["name"],
+                 "is_demo": bool(plot["is_demo"])},
+        "freshness": freshness,
+        "water": water,
+        "weather": weather,
+        "recommendation": recommendation,
+        "latest_leaf": latest_leaf,
+    }
+
+
+@router.get("/{plot_id}/today")
+def plot_today(plot_id: int):
+    with db.session_scope() as conn:
+        plot = db.get_plot(conn, plot_id)
+        if plot is None:
+            raise HTTPException(status_code=404,
+                                detail={"code": "plot_not_found",
+                                        "message": "plot not found"})
+        return _today_payload(conn, plot)
+
+
+@router.post("/{plot_id}/water-observations")
+def post_water_observation(plot_id: int, body: WaterObservationIn):
+    with db.session_scope() as conn:
+        plot = db.get_plot(conn, plot_id)
+        if plot is None:
+            raise HTTPException(status_code=404,
+                                detail={"code": "plot_not_found",
+                                        "message": "plot not found"})
+        if not -30.0 <= body.level_cm <= 30.0:
+            return JSONResponse(
+                status_code=422,
+                content={"code": "implausible_level",
+                         "message": "level_cm must be between -30 and 30 cm",
+                         "correlation_id": _correlation_id()})
+        observed_at = body.observed_at or _utc_now_iso()
+        received_at = _utc_now_iso()
+        obs_id = insert_water_observation(
+            conn, plot_id=plot_id, source=body.source,
+            level_cm=body.level_cm, observed_at=observed_at,
+            received_at=received_at, raw_distance=body.raw_distance,
+            actor=body.actor, quality_state="ok",
+            demo=bool(plot["is_demo"]))
+        snap = capture_weather_snapshot(
+            conn, plot_id, demo=bool(plot["is_demo"]))
+        stage = stage_on(_stage_days(date.fromisoformat(plot["transplant_date"])))
+        rain = snap.rain72_mm if snap.availability != "unavailable" else 0.0
+        dec = decide(
+            body.level_cm, stage, rain,
+            water_fresh=True, weather_availability=snap.availability)
+        rec_id = insert_recommendation(
+            conn, plot_id=plot_id, observation_id=obs_id,
+            weather_snapshot_id=snap.id, stage=stage.value,
+            action=dec.action, reason_codes=json.dumps([dec.reason_id]),
+            ruleset_version=RULESET_VERSION,
+            created_at=_utc_now_iso(),
+            needs_review=(weather_state_payload(conn, plot_id)
+                          ["secondary_review"]["needs_review"]),
+            demo=bool(plot["is_demo"]))
+        supersede_older_recommendations(
+            conn, plot_id, keep_id=rec_id, superseded_at=_utc_now_iso())
+        return _today_payload(conn, plot)
