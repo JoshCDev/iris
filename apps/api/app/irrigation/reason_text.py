@@ -34,6 +34,20 @@ _PATTERNS: list[tuple[re.Pattern[str], str]] = [
         ),
         r"Season complete: the field can be drained for harvest.",
     ),
+    (
+        re.compile(
+            r"^Data air kedaluwarsa atau hilang: ukur ulang level pipa dan "
+            r"periksa kembali dalam 15 menit\.$"
+        ),
+        r"Water data is stale or missing: re-measure the field-tube level and recheck in 15 minutes.",
+    ),
+    (
+        re.compile(
+            r"^Prakiraan BMKG tidak tersedia: saran berbasis hujan tidak "
+            r"lengkap\. Periksa kondisi lokal dan ulangi pengecekan\.$"
+        ),
+        r"The BMKG forecast is unavailable: rain-aware advice is incomplete. Check local conditions and recheck.",
+    ),
 ]
 
 

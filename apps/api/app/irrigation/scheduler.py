@@ -18,7 +18,19 @@ class Decision:
     refill_to_cm: float | None = None
 
 
-def decide(level_cm: float, stage: Stage, rain72_mm: float) -> Decision:
+def decide(level_cm: float, stage: Stage, rain72_mm: float, *,
+           water_fresh: bool = True,
+           weather_availability: str = "fresh") -> Decision:
+    if not water_fresh:
+        return Decision(
+            "RECHECK_REQUIRED",
+            "Data air kedaluwarsa atau hilang: ukur ulang level pipa dan "
+            "periksa kembali dalam 15 menit.")
+    if weather_availability == "unavailable":
+        return Decision(
+            "RECHECK_REQUIRED",
+            "Prakiraan BMKG tidak tersedia: saran berbasis hujan tidak "
+            "lengkap. Periksa kondisi lokal dan ulangi pengecekan.")
     trig = trigger_level_cm(stage)
     if trig is None:
         return Decision("DRAIN",

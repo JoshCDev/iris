@@ -103,3 +103,23 @@ def test_english_reason_maps_legacy_indonesian():
     assert english_reason("Safe (+1.0 cm; trigger -15.0 cm). Check again in 15 minutes.") == (
         "Safe (+1.0 cm; trigger -15.0 cm). Check again in 15 minutes."
     )
+
+
+def test_recheck_when_water_stale():
+    d = decide(-16.0, Stage.VEG_AWD, 20.0, water_fresh=False)
+    assert d.action == "RECHECK_REQUIRED"
+    assert "uk" in d.reason_id or "periksa" in d.reason_id
+
+
+def test_recheck_when_weather_unavailable():
+    d = decide(-5.0, Stage.VEG_AWD, 0.0, weather_availability="unavailable")
+    assert d.action == "RECHECK_REQUIRED"
+
+
+def test_stale_cache_weather_still_decides_with_review_note():
+    d = decide(-16.0, Stage.VEG_AWD, 20.0, weather_availability="stale-cache")
+    assert d.action == "HOLD_FOR_RAIN"
+
+
+def test_fresh_defaults_unchanged():
+    assert decide(-5.0, Stage.VEG_AWD, 0.0).action == "WAIT"
