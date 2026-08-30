@@ -52,7 +52,22 @@ vi.spyOn(api, "getReceipt").mockResolvedValue({
 describe("HomeFacets", () => {
   it("never asserts a water-saving percentage on Today", async () => {
     render(
-      <PlotContext.Provider value={{ status, history, reports: [], error: null, refresh: vi.fn() }}>
+      <PlotContext.Provider
+        value={{
+          status,
+          history,
+          reports: [],
+          error: null,
+          refresh: vi.fn(),
+          // New v1 fields (Task 3.3): not exercised by this test, present
+          // so the provider bundle typechecks.
+          plots: [],
+          activePlotId: null,
+          activePlot: null,
+          today: null,
+          selectPlot: vi.fn(),
+        }}
+      >
         <HomeFacets askHref="/assistant" leafHref="/assistant" />
       </PlotContext.Provider>,
     );
