@@ -366,6 +366,14 @@ async def vision_predict(
     image_bytes = await image.read()
     file_name = Path(image.filename or "upload.jpg").name
 
+    # Stage 0: upload limits + content signature (bytes, pixels, decompression bomb).
+    try:
+        image_guard.validate_upload(image_bytes)
+    except ImageRejectedError as exc:
+        status = 413 if exc.code == "upload_too_large" else 422
+        return JSONResponse(status_code=status,
+                            content={"code": exc.code, "detail": exc.message})
+
     # Stage 1: deterministic quality guard (blank/solid/non-leaf rejection).
     try:
         quality = image_guard.analyze(image_bytes)

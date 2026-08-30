@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import io
+import warnings
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 from PIL import Image
+
+MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MiB (LEAF-003)
+MAX_PIXELS = 20_000_000  # 20 MP (LEAF-003)
 
 
 @dataclass
@@ -26,6 +30,42 @@ class ImageRejectedError(ValueError):
 
 class ImageGuardService:
     min_size = 80
+
+    def validate_upload(self, image_bytes: bytes) -> None:
+        """Byte + decoded-pixel + decompression-bomb checks BEFORE analysis."""
+        if len(image_bytes) > MAX_UPLOAD_BYTES:
+            raise ImageRejectedError(
+                code="upload_too_large",
+                message="The photo exceeds the 8 MiB upload limit.",
+                metrics={"bytes": float(len(image_bytes))},
+                retry_guidance=["Compress or resize the photo below 8 MiB."])
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", Image.DecompressionBombWarning)
+                image = Image.open(io.BytesIO(image_bytes))
+                image.load()
+        except Image.DecompressionBombError:
+            raise ImageRejectedError(
+                code="decompression_bomb",
+                message="The image dimensions exceed the safety limit.",
+                metrics={}, retry_guidance=["Upload a normal-resolution photo."])
+        except Image.DecompressionBombWarning:
+            raise ImageRejectedError(
+                code="decompression_bomb",
+                message="The image dimensions exceed the safety limit.",
+                metrics={}, retry_guidance=["Upload a normal-resolution photo."])
+        except Exception as exc:
+            raise ImageRejectedError(
+                code="unreadable_image",
+                message="The file could not be read as a photo.",
+                metrics={}, retry_guidance=["Upload a JPG, PNG, or WebP image."]) from exc
+        width, height = image.size
+        if width * height > MAX_PIXELS:
+            raise ImageRejectedError(
+                code="image_too_many_pixels",
+                message=f"The photo is {width}x{height} px, above the 20 MP limit.",
+                metrics={"width": float(width), "height": float(height)},
+                retry_guidance=["Resize the photo below 20 megapixels."])
 
     def analyze(self, image_bytes: bytes) -> ImageGuardResult:
         try:
