@@ -36,6 +36,38 @@ export interface Recommendation {
   confirmation_state: "pending" | "confirmed";
 }
 
+// Raw `recommendations` row as returned by the confirmations GET/POST
+// endpoints (`recommendation_with_confirmations` returns `dict(rec)`):
+// reason_codes is the stored JSON-encoded string, needs_review/demo are
+// int 0/1, and there is no computed confirmation_state.
+export interface RecommendationRow {
+  id: number;
+  plot_id: number;
+  observation_id: number;
+  weather_snapshot_id: number | null;
+  stage: string;
+  action: string;
+  reason_codes: string;
+  ruleset_version: string;
+  needs_review: boolean | number;
+  created_at: string;
+  superseded_at: string | null;
+  demo: number;
+}
+
+// Recommendation entry in `WaterHistory` (water.py water_history rows):
+// reason_codes is parsed to a list, needs_review coerced to bool, plus
+// created_at/superseded_at; no confirmation_state.
+export interface WaterHistoryRecommendation {
+  id: number;
+  action: string;
+  reason_codes: string[];
+  ruleset_version: string;
+  needs_review: boolean;
+  created_at: string;
+  superseded_at: string | null;
+}
+
 export interface TodayPayload {
   plot: PlotSummary;
   freshness: { state: string; last_observed_at: string | null };
@@ -57,7 +89,7 @@ export interface WaterObservationRow {
 export interface WaterHistory {
   plot_id: number;
   observations: WaterObservationRow[];
-  recommendations: Recommendation[];
+  recommendations: WaterHistoryRecommendation[];
   total: number;
 }
 
@@ -69,7 +101,8 @@ export interface ActionConfirmation {
   volume_m3: number | null;
   note: string | null;
   created_at: string;
-  demo: boolean;
+  // Backend sends the raw row, so `demo` is int 0/1 (see db_l1.insert_action_confirmation).
+  demo: number;
 }
 
 export interface EvidenceE3 {
@@ -137,7 +170,7 @@ export function getV1WaterHistory(
 export function postV1Confirmation(
   recommendationId: number,
   body: { status: string; note?: string; volume_m3?: number | null; action_at?: string },
-): Promise<{ recommendation: Recommendation; confirmations: ActionConfirmation[] }> {
+): Promise<{ recommendation: RecommendationRow; confirmations: ActionConfirmation[] }> {
   return request(`/v1/recommendations/${recommendationId}/confirmations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -147,7 +180,7 @@ export function postV1Confirmation(
 
 export function getV1Recommendation(
   recommendationId: number,
-): Promise<{ recommendation: Recommendation; confirmations: ActionConfirmation[] }> {
+): Promise<{ recommendation: RecommendationRow; confirmations: ActionConfirmation[] }> {
   return request(`/v1/recommendations/${recommendationId}`);
 }
 
