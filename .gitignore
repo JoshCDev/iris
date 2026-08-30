@@ -25,8 +25,7 @@ apps/api/storage/uploads/
 experiments/data/
 experiments/outputs/rice_v03/
 
-# Poster (PDF, charts, build scripts stay local)
-assets/poster/*.png
+# Poster (PDF, build scripts stay local)
 assets/poster/*.py
 assets/poster/*.pdf
 assets/poster/tmp_preview/
