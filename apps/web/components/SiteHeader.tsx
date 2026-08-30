@@ -10,6 +10,8 @@ const LINKS = [
   { href: "/water", label: "Water" },
   { href: "/health", label: "Leaf" },
   { href: "/assistant", label: "Ask" },
+  { href: "/records", label: "Records" },
+  { href: "/evidence", label: "Evidence" },
 ];
 
 function isCurrent(pathname: string, href: string): boolean {
