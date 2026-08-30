@@ -30,6 +30,7 @@ from app.receipts import (
     build_e3_receipt,
     receipt_json,
 )
+from app.routers import evidence as evidence_router
 from app.vision.advisory import AdvisoryService
 from app.vision.crop_packs import RICE_SLUG, CropPackService
 from app.vision.image_guard import ImageGuardService, ImageRejectedError
@@ -68,6 +69,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(evidence_router.router)
 
 
 db.init_db(get_settings().iris_db)
