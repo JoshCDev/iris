@@ -277,7 +277,10 @@ export function WaterClient() {
             {history ? `${fmtInt(history.readings.length)} readings` : ""}
           </span>
         </div>
-        <LevelChart readings={history?.readings ?? []} />
+        <LevelChart
+          readings={history?.readings ?? []}
+          dataKind={plot.today?.water.kind ?? null}
+        />
       </div>
 
       {/* Receipt */}

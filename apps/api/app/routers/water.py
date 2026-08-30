@@ -51,6 +51,22 @@ def _stage_for(plot) -> str:
     return stage_on(_stage_days(date.fromisoformat(plot["transplant_date"])))
 
 
+def _data_kind(source: str | None) -> str:
+    """§11.2 data-kind distinction: manual | sensor | simulation | other.
+
+    Maps the stored observation source onto the chart legend vocabulary;
+    unknown/legacy sources fall back to "other" (no claim made)."""
+    if source is None:
+        return "other"
+    if source == "manual":
+        return "manual"
+    if source == "sensor":
+        return "sensor"
+    if source in ("simulation", "demo"):
+        return "simulation"
+    return "other"
+
+
 class WaterObservationIn(BaseModel):
     level_cm: float
     source: Literal["manual", "sensor", "imported", "demo", "simulation"] = "manual"
@@ -71,11 +87,13 @@ def _today_payload(conn, plot) -> dict[str, Any]:
         " ORDER BY id DESC LIMIT 1", (pid,)).fetchone()
 
     freshness = {"state": "current", "last_observed_at": None}
-    water = {"level_cm": None, "source": None, "stage": _stage_for(plot)}
+    water = {"level_cm": None, "source": None, "kind": "other",
+             "stage": _stage_for(plot)}
     if obs is not None:
         freshness["last_observed_at"] = obs["observed_at"]
         water = {"level_cm": float(obs["level_cm"]),
-                 "source": obs["source"], "stage": _stage_for(plot)}
+                 "source": obs["source"], "kind": _data_kind(obs["source"]),
+                 "stage": _stage_for(plot)}
 
     recommendation = None
     if rec is not None:
@@ -83,13 +101,17 @@ def _today_payload(conn, plot) -> dict[str, Any]:
             "SELECT status FROM action_confirmations"
             " WHERE recommendation_id = ? ORDER BY id DESC LIMIT 1",
             (rec["id"],)).fetchone()
+        # The latest confirmation only counts as "confirmed" when the farmer
+        # actually performed the action; a defer/decline/correction leaves the
+        # recommendation pending (final whole-branch review, Finding 1).
+        confirmed = conf is not None and conf["status"] == "performed"
         recommendation = {
             "id": int(rec["id"]),
             "action": rec["action"],
             "reason_codes": json.loads(rec["reason_codes"]),
             "ruleset_version": rec["ruleset_version"],
             "needs_review": bool(rec["needs_review"]),
-            "confirmation_state": "confirmed" if conf else "pending",
+            "confirmation_state": "confirmed" if confirmed else "pending",
         }
 
     latest_leaf = None
@@ -161,7 +183,8 @@ def water_history(plot_id: int, limit: int = 20, offset: int = 0):
             (plot_id,)).fetchone()["n"]
         obs = [
             {"id": int(o["id"]), "level_cm": float(o["level_cm"]),
-             "source": o["source"], "observed_at": o["observed_at"],
+             "source": o["source"], "kind": _data_kind(o["source"]),
+             "observed_at": o["observed_at"],
              "received_at": o["received_at"],
              "quality_state": o["quality_state"], "demo": bool(o["demo"])}
             for o in conn.execute(

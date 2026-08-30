@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { PlotProvider, usePlot } from "@/lib/PlotContext";
 import * as v1 from "@/lib/api/v1";
 
@@ -15,6 +15,8 @@ function Probe() {
 }
 
 describe("PlotProvider", () => {
+  afterEach(cleanup);
+
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(v1, "getV1Plots").mockResolvedValue({
@@ -42,5 +44,17 @@ describe("PlotProvider", () => {
     await waitFor(() => expect(screen.getByTestId("plot-id").textContent).toBe("7"));
     expect(screen.getByTestId("plot-count").textContent).toBe("1");
     await waitFor(() => expect(screen.getByTestId("today-action").textContent).toBe("WAIT"));
+  });
+
+  it("retries getV1Plots when the initial load fails", async () => {
+    vi.mocked(v1.getV1Plots)
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce({
+        plots: [{ id: 7, name: "Petak Utara", is_demo: false }],
+      });
+    render(<PlotProvider><Probe /></PlotProvider>);
+    await waitFor(() => expect(screen.getByTestId("plot-id").textContent).toBe("7"));
+    expect(screen.getByTestId("plot-count").textContent).toBe("1");
+    expect(v1.getV1Plots).toHaveBeenCalledTimes(2);
   });
 });

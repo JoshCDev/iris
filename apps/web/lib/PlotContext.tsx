@@ -49,8 +49,19 @@ export function PlotProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (activePlotId === null) return;
     try {
+      // The plot list is fetched once on mount; if that initial load failed
+      // or came back empty the app would stay stuck on "Loading plot…" until
+      // a hard refresh. Re-run it here (before the activePlotId guard, which
+      // is exactly the state that gets stuck) so any later refresh self-heals.
+      if (plots.length === 0) {
+        const res = await getV1Plots();
+        setPlots(res.plots);
+        if (res.plots.length > 0) {
+          setActivePlotId((prev) => prev ?? res.plots[0].id);
+        }
+      }
+      if (activePlotId === null) return;
       const [t] = await Promise.all([
         getV1Today(activePlotId),
         getV1WaterHistory(activePlotId, { limit: 50 }),
@@ -61,7 +72,7 @@ export function PlotProvider({ children }: { children: ReactNode }) {
     } catch {
       setError("Cannot reach the data server. Try again shortly.");
     }
-  }, [activePlotId]);
+  }, [activePlotId, plots.length]);
 
   useEffect(() => {
     let alive = true;

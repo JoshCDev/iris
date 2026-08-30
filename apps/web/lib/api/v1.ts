@@ -68,10 +68,12 @@ export interface WaterHistoryRecommendation {
   superseded_at: string | null;
 }
 
+export type DataKind = "manual" | "sensor" | "simulation" | "other";
+
 export interface TodayPayload {
   plot: PlotSummary;
   freshness: { state: string; last_observed_at: string | null };
-  water: { level_cm: number | null; source: string | null; stage: string };
+  water: { level_cm: number | null; source: string | null; kind?: DataKind; stage: string };
   weather: WeatherState;
   recommendation: Recommendation | null;
   latest_leaf: {
@@ -81,7 +83,7 @@ export interface TodayPayload {
 }
 
 export interface WaterObservationRow {
-  id: number; level_cm: number; source: string;
+  id: number; level_cm: number; source: string; kind?: DataKind;
   observed_at: string; received_at: string;
   quality_state: string; demo: boolean;
 }

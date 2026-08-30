@@ -25,9 +25,11 @@ function niceDomain(min: number, max: number): [number, number] {
 export function LevelChart({
   readings,
   compact = false,
+  dataKind,
 }: {
   readings: Reading[];
   compact?: boolean;
+  dataKind?: "manual" | "sensor" | "simulation" | "other" | null;
 }) {
   const [hover, setHover] = useState<number | null>(null);
 
@@ -83,6 +85,16 @@ export function LevelChart({
   const min = Math.min(...levels);
   const max = Math.max(...levels);
 
+  const kindLabel: Record<string, string> = {
+    manual: "manual observation",
+    sensor: "sensor",
+    simulation: "simulation",
+  };
+  // Only claim a data kind when the payload explicitly names one;
+  // unknown/"other" sources (e.g. legacy seeded readings) render as before.
+  const dataSourceLabel =
+    dataKind && dataKind in kindLabel ? kindLabel[dataKind] : null;
+
   return (
     <figure
       className="level-chart"
@@ -90,6 +102,11 @@ export function LevelChart({
       aria-labelledby="level-chart-title"
     >
       <h3 id="level-chart-title" className="sr-only">Water level over time</h3>
+      {dataSourceLabel && (
+        <p className="small muted" style={{ margin: "0 0 6px" }}>
+          Data source: {dataSourceLabel}
+        </p>
+      )}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
