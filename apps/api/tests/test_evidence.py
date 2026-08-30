@@ -27,3 +27,14 @@ def test_vision_evidence_benchmark_labels():
     assert body["accuracy"] == 0.9784
     assert body["field_validation"] == "pending"
     assert body["model_version"]
+
+
+def test_plot_receipt_claim_disabled():
+    r = client.get("/api/plots/1/receipt?claim=plot")
+    assert r.status_code == 410
+    assert r.json()["detail"]["code"] == "receipt_disabled"
+
+
+def test_e3_receipt_claim_still_works():
+    r = client.get("/api/plots/1/receipt?claim=e3")
+    assert r.status_code in (200, 404)  # 404 only if plot 1 missing in test DB

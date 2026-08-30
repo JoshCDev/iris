@@ -298,13 +298,25 @@ def test_receipt_default_is_e3(client):
     assert "30-day demo plot" in body["claim_note"]
 
 
-def test_receipt_plot_claim_needs_irrigation(client):
+def test_receipt_plot_claim_disabled(client):
     r = client.post("/api/ingest", json={
         "device_plot_name": "ResiPlot", "dist_cm": 25.0})
     pid = r.json()["plot_id"]
     empty = client.get(f"/api/plots/{pid}/receipt?claim=plot")
-    # one ingest at +5 cm typically WAIT, so no irrigation row yet
-    assert empty.status_code in (200, 409)
+    assert empty.status_code == 410
+    assert empty.json()["detail"]["code"] == "receipt_disabled"
+
+
+def test_demo_seed_requires_demo_mode(tmp_path, monkeypatch):
+    monkeypatch.setenv("IRIS_DEMO_MODE", "0")
+    monkeypatch.setenv("IRIS_DEVICE_TOKEN", "")
+    cfg.reset_settings_cache()
+    main_mod.db.init_db(f"sqlite:///{(tmp_path / 't.db').as_posix()}")
+    r = TestClient(main_mod.app).post("/api/demo/seed")
+    assert r.status_code == 403
+    assert r.json()["detail"]["code"] == "demo_mode_required"
+    with db.session_scope() as conn:
+        assert db.count_rows(conn, "plots") == 0
 
 
 def test_ingest_pipe_zero_cm_on_autocreate(client):

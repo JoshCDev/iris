@@ -17,7 +17,6 @@ from app.config import get_settings
 from app.fusion.risk import assess as fusion_assess
 from app.fusion.risk import awd_state_from as fusion_awd_state_from
 from app.fusion.risk import wet_weather_from_rain
-from app.irrigation.ipcc import build_receipt
 from app.irrigation.protocol import stage_on, trigger_level_cm
 from app.irrigation.reason_text import english_reason
 from app.irrigation.scheduler import REFILL_CM, decide
@@ -26,7 +25,6 @@ from app.irrigation.weather_bmkg import fetch_forecast_72h_rain
 from app.irrigation.rain_hitl import weather_payload
 from app.receipts import (
     E3_CLAIM_NOTE,
-    PLOT_CLAIM_NOTE,
     build_e3_receipt,
     receipt_json,
 )
@@ -249,36 +247,17 @@ def plot_history(plot_id: int, days: int = 7):
                 "readings": readings, "decisions": decisions}
 
 
-def _flooded_days_from_readings(conn, plot_id: int,
-                                transplant_date: date,
-                                season_days: int) -> tuple[int, bool]:
-    """Count distinct WIB days whose LAST reading still stands flooded.
-
-    Returns (flooded_days, has_any_reading_in_window).
-    """
-    rows = conn.execute(
-        "SELECT ts, level_cm FROM readings WHERE plot_id = ? ORDER BY ts ASC",
-        (plot_id,),
-    ).fetchall()
-    if not rows:
-        return 0, False
-    horizon = transplant_date + timedelta(days=season_days)
-    per_day: dict[str, float] = {}
-    for r in rows:
-        day_wib = _parse_ts(r["ts"]).astimezone(_WIB).date()
-        if day_wib < transplant_date or day_wib >= horizon:
-            continue
-        per_day[day_wib.isoformat()] = float(r["level_cm"])
-    flooded = sum(1 for lvl in per_day.values() if lvl >= 0.0)
-    return flooded, True
-
-
 @app.get("/api/plots/{plot_id}/receipt")
 def plot_receipt(plot_id: int, season_days: int = 100, claim: str = "e3"):
     if season_days <= 0 or season_days > 366:
         raise HTTPException(status_code=422, detail="season_days must be positive")
     if claim not in ("e3", "plot"):
         raise HTTPException(status_code=422, detail="claim must be e3 or plot")
+    if claim == "plot":
+        raise HTTPException(
+            status_code=410,
+            detail={"code": "receipt_disabled",
+                    "detail": "plot-window receipt is disabled (EVD-007)"})
     with db.session_scope() as conn:
         plot = db.get_plot(conn, plot_id)
         if plot is None:
@@ -288,35 +267,7 @@ def plot_receipt(plot_id: int, season_days: int = 100, claim: str = "e3"):
             return receipt_json(
                 plot_id, receipt, claim_source="e3_backtest",
                 claim_note=E3_CLAIM_NOTE)
-        transplant = date.fromisoformat(plot["transplant_date"])
-        flooded_days, has_data = _flooded_days_from_readings(
-            conn, plot_id, transplant, season_days)
-        water_actual_m3 = float(conn.execute(
-            "SELECT COALESCE(SUM(volume_m3), 0.0) AS v FROM irrigations"
-            " WHERE plot_id = ?", (plot_id,)).fetchone()["v"])
-        if not has_data or water_actual_m3 <= 0.0:
-            raise HTTPException(
-                status_code=409,
-                detail="no reading/irrigation data yet for a green receipt")
-        flooded_days = min(max(flooded_days, 0), season_days)
-        if flooded_days <= 0:
-            raise HTTPException(
-                status_code=409,
-                detail="no flooded days recorded; receipt cannot be computed")
-        water_baseline_m3 = round(
-            water_actual_m3 * season_days / flooded_days, 2)
-        try:
-            receipt = build_receipt(
-                plot_name=plot["name"], season_days=season_days,
-                flooded_days=flooded_days,
-                water_baseline_m3=water_baseline_m3,
-                water_actual_m3=round(water_actual_m3, 2),
-                area_ha=float(plot["area_ha"]), label="simulated")
-        except ValueError as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
-        return receipt_json(
-            plot_id, receipt, claim_source="plot_window",
-            claim_note=PLOT_CLAIM_NOTE)
+        raise HTTPException(status_code=422, detail="claim must be e3 or plot")
 
 
 _weather_cache: dict[str, dict[str, Any]] = {}
@@ -380,9 +331,12 @@ def patch_plot(plot_id: int, body: PlotPatch):
 
 @app.post("/api/demo/seed")
 def demo_seed():
+    if not get_settings().iris_demo_mode:
+        raise HTTPException(status_code=403,
+                            detail={"code": "demo_mode_required",
+                                    "detail": "demo seeding requires demo mode"})
     from scripts.seed_demo import seed_demo
-    summary = seed_demo()
-    return summary
+    return seed_demo()
 
 
 # --- vision endpoints --------------------------------------------------------
