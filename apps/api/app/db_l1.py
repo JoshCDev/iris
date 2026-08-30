@@ -106,6 +106,25 @@ def insert_evidence_run(conn, *, type_: str, version: str,
     return int(cur.lastrowid)
 
 
+def insert_leaf_assessment(conn, *, plot_id: int, image_hash: str,
+                           retention_mode: str, model_version: str,
+                           guard_result: str, class_: str | None,
+                           confidence: float | None = None,
+                           severity: str | None = None,
+                           evidence_type: str = "public-dataset",
+                           created_at: str, demo: bool = True) -> int:
+    # `class` is a legal SQLite column name (created unquoted by the 0002
+    # migration); the schema quotes nothing, so plain SQL works.
+    cur = conn.execute(
+        "INSERT INTO leaf_assessments (plot_id, image_hash, retention_mode,"
+        " model_version, guard_result, class, confidence, severity,"
+        " evidence_type, created_at, demo)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (plot_id, image_hash, retention_mode, model_version, guard_result,
+         class_, confidence, severity, evidence_type, created_at, int(demo)))
+    return int(cur.lastrowid)
+
+
 def latest_leaf_assessment(conn, plot_id: int) -> sqlite3.Row | None:
     return conn.execute(
         "SELECT * FROM leaf_assessments WHERE plot_id = ?"

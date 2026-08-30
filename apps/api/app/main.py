@@ -33,6 +33,7 @@ from app.receipts import (
 from app.routers import confirmations as confirmations_router
 from app.routers import evidence as evidence_router
 from app.routers import health as health_router
+from app.routers import leaf as leaf_router
 from app.routers import plots as plots_router
 from app.routers import water as water_router
 from app.vision.advisory import AdvisoryService
@@ -77,6 +78,7 @@ app.add_middleware(
 app.include_router(confirmations_router.router)
 app.include_router(evidence_router.router)
 app.include_router(health_router.router)
+app.include_router(leaf_router.router)
 app.include_router(plots_router.router)
 app.include_router(water_router.router)
 
