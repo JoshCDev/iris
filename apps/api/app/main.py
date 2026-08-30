@@ -28,6 +28,7 @@ from app.receipts import (
     build_e3_receipt,
     receipt_json,
 )
+from app.routers import confirmations as confirmations_router
 from app.routers import evidence as evidence_router
 from app.routers import health as health_router
 from app.routers import plots as plots_router
@@ -71,6 +72,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(confirmations_router.router)
 app.include_router(evidence_router.router)
 app.include_router(health_router.router)
 app.include_router(plots_router.router)
