@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { PillarCard } from "@/components/PillarCard";
 import { usePlot } from "@/lib/PlotContext";
-import { getReceipt, type GreenReceipt } from "@/lib/api";
-import { actionVerb, fmtNum } from "@/lib/format";
+import { actionVerb } from "@/lib/format";
 
 function Sparkline({ values }: { values: number[] }) {
   if (values.length < 2) {
@@ -43,22 +41,6 @@ function Sparkline({ values }: { values: number[] }) {
 
 export function HomeFacets({ askHref, leafHref }: { askHref: string; leafHref: string }) {
   const { status, history } = usePlot();
-  const [receipt, setReceipt] = useState<GreenReceipt | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    getReceipt(1, 100)
-      .then((r) => {
-        if (alive) setReceipt(r);
-      })
-      .catch(() => {
-        /* non-fatal */
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
   const last48 = (history?.readings ?? []).slice(-48).map((r) => r.level_cm);
 
   return (
@@ -77,12 +59,8 @@ export function HomeFacets({ askHref, leafHref }: { askHref: string; leafHref: s
           <>
             <Sparkline values={last48} />
             <span className="pillar-card__figure">
-              {receipt?.claim_source === "e3_backtest"
-                ? `${fmtNum(receipt.water_saved_pct)}% water saved`
-                : "Seasonal water-saving estimate"}
-              <small>
-                {receipt?.claim_source === "e3_backtest" ? "E3 backtest [simulated]" : "E3 season claim"}
-              </small>
+              Recommendation only
+              <small>Defined simulation lives on Evidence</small>
             </span>
           </>
         }

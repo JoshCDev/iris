@@ -27,7 +27,7 @@ interface PlotBundle {
   refresh: () => void;
 }
 
-const PlotContext = createContext<PlotBundle | null>(null);
+export const PlotContext = createContext<PlotBundle | null>(null);
 
 export function PlotProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<PlotStatus | null>(null);
