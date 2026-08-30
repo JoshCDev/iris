@@ -82,6 +82,24 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     content TEXT NOT NULL,
     tool_trace_json TEXT
 );
+
+-- Created here (not only in the L1 migration) so Task 1.1's snapshot
+-- service can run against init_db() before Task 2.1 lands; the 0002
+-- migration's CREATE TABLE for this table then becomes a no-op.
+CREATE TABLE IF NOT EXISTS weather_snapshots (
+    id INTEGER PRIMARY KEY,
+    plot_id INTEGER NOT NULL REFERENCES plots(id),
+    source TEXT NOT NULL,
+    adm4 TEXT,
+    fetched_at TEXT NOT NULL,
+    window_end TEXT NOT NULL,
+    rain72_mm REAL,
+    availability TEXT NOT NULL,
+    stale_since TEXT,
+    demo INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS ix_weather_snapshots_plot
+    ON weather_snapshots(plot_id, id);
 """
 
 

@@ -41,6 +41,8 @@ class Settings:
         self.iris_db: str = default_db_url()
         self.iris_llm_model: str = os.environ.get("IRIS_LLM_MODEL", DEFAULT_LLM_MODEL)
         self.deepseek_api_key: str = os.environ.get("DEEPSEEK_API_KEY", "")
+        # Demo mode: explicit flag (L2 auth stays stubbed while on).
+        self.iris_demo_mode: bool = os.environ.get("IRIS_DEMO_MODE", "1") == "1"
         # Empty token = demo mode: auth on ingest is optional.
         self.iris_device_token: str = os.environ.get("IRIS_DEVICE_TOKEN", "")
         self.web_origin: str = os.environ.get("WEB_ORIGIN", "http://localhost:3000")
