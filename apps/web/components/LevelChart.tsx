@@ -79,8 +79,17 @@ export function LevelChart({
 
   const hp = hover !== null ? pts[hover] : null;
 
+  const levels = readings.map((r) => r.level_cm);
+  const min = Math.min(...levels);
+  const max = Math.max(...levels);
+
   return (
-    <figure className="level-chart" style={{ margin: 0, position: "relative" }}>
+    <figure
+      className="level-chart"
+      style={{ margin: 0, position: "relative" }}
+      aria-labelledby="level-chart-title"
+    >
+      <h3 id="level-chart-title" className="sr-only">Water level over time</h3>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
@@ -169,6 +178,28 @@ export function LevelChart({
           <strong>{fmtNum(hp.level)} cm</strong> · {fmtTs(hp.ts)}
         </div>
       )}
+      <p className="small" style={{ margin: "6px 0 8px" }}>
+        Latest {fmtNum(last.level)} cm · minimum {fmtNum(min)} · maximum {fmtNum(max)} · trigger −15 cm · {fmtTs(readings[0].ts)} → {fmtTs(readings[readings.length - 1].ts)}
+      </p>
+      <details className="data-table">
+        <summary>Data table</summary>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Time</th>
+              <th scope="col">Water level (cm)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {readings.map((r) => (
+              <tr key={r.ts}>
+                <td>{fmtTs(r.ts)}</td>
+                <td>{fmtNum(r.level_cm)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
       <figcaption className="chart-legend">
         <span><i style={{ background: "#2f6845" }} />water level (cm)</span>
         <span><i style={{ background: "rgba(45,95,115,0.35)" }} />flood band +5…0 cm (required at flowering)</span>

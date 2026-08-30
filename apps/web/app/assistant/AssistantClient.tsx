@@ -60,6 +60,7 @@ export function AssistantClient() {
   const [pendingImage, setPendingImage] = useState<{ dataUri: string; previewUrl: string; name: string } | null>(null);
   const sessionRef = useRef<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastWireRef = useRef<ChatMessage[] | null>(null);
   const sentQ = useRef<string | null>(null);
@@ -137,6 +138,7 @@ export function AssistantClient() {
         URL.revokeObjectURL(pendingImage.previewUrl);
         setPendingImage(null);
       }
+      composerRef.current?.focus();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Cannot reach the assistant server.");
     } finally {
@@ -198,7 +200,7 @@ export function AssistantClient() {
           <span>Loading plot record…</span>
         )}
       </div>
-      <div className="chat-scroll" ref={scrollRef}>
+      <div className="chat-scroll" role="log" aria-live="polite" aria-busy={busy} ref={scrollRef}>
           {messages.length === 0 && (
             <p className="muted">
               Start from this plot's water action or leaf, or attach a photograph.
@@ -281,7 +283,10 @@ export function AssistantClient() {
               style={{ display: "none" }}
               onChange={(e) => attachFile(e.target.files?.[0])}
             />
+            <label htmlFor="chat-input" className="sr-only">Ask IRIS</label>
             <textarea
+              id="chat-input"
+              ref={composerRef}
               className="textarea"
               rows={2}
               placeholder="Ask a question about this plot…"
