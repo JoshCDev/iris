@@ -126,6 +126,17 @@ class Database:
         with self.connect() as conn:
             conn.executescript(_SCHEMA)
             _ensure_plot_columns(conn)
+        self._apply_migrations()
+
+    def _apply_migrations(self) -> None:
+        try:
+            from alembic import command
+            from alembic.config import Config
+        except ImportError:
+            return  # tests without alembic installed fall back to schema only
+        cfg = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+        cfg.set_main_option("sqlalchemy.url", self.url)
+        command.upgrade(cfg, "head")
 
 
 _default: Database | None = None
