@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${serif.variable}`}>
+    <html lang="id" className={`${jakarta.variable} ${serif.variable}`}>
       <body>
         <a href="#main-content" className="skip-link">
           Skip to main content
