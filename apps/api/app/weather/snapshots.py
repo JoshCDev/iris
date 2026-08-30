@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+from app.db_l1 import insert_weather_snapshot_row
 from app.irrigation.weather_bmkg import DEFAULT_ADM4, fetch_forecast_72h_rain
 
 _WEATHER_TTL_S = 15 * 60.0
@@ -67,13 +68,12 @@ def capture_weather_snapshot(conn, plot_id: int, adm4: str | None = None,
         availability = "unavailable"
         rain72 = None
         stale_since = _utc_now_iso()
-    cur = conn.execute(
-        "INSERT INTO weather_snapshots (plot_id, source, adm4, fetched_at,"
-        " window_end, rain72_mm, availability, stale_since, demo)"
-        " VALUES (?, 'BMKG', ?, ?, ?, ?, ?, ?, ?)",
-        (plot_id, code, fetched_at, _window_end(fetched_at), rain72,
-         availability, stale_since, int(demo)))
-    return WeatherSnapshot(id=int(cur.lastrowid), plot_id=plot_id,
+    snap_id = insert_weather_snapshot_row(
+        conn, plot_id=plot_id, source="BMKG", adm4=code,
+        fetched_at=fetched_at, window_end=_window_end(fetched_at),
+        rain72_mm=rain72, availability=availability,
+        stale_since=stale_since, demo=demo)
+    return WeatherSnapshot(id=snap_id, plot_id=plot_id,
                            source="BMKG", adm4=code, fetched_at=fetched_at,
                            window_end=_window_end(fetched_at),
                            rain72_mm=rain72, availability=availability,
