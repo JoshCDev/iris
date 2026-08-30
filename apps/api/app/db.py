@@ -275,6 +275,20 @@ def delete_demo_rows(conn: sqlite3.Connection) -> int:
     if not ids:
         return 0
     qmarks = ",".join("?" * len(ids))
+    # L1 children first (FK-safe order): confirmations reference
+    # recommendations, which reference observations/weather snapshots.
+    conn.execute(
+        f"DELETE FROM action_confirmations WHERE recommendation_id IN"
+        f" (SELECT id FROM recommendations WHERE plot_id IN ({qmarks}))",
+        ids)
+    conn.execute(
+        f"DELETE FROM recommendations WHERE plot_id IN ({qmarks})", ids)
+    conn.execute(
+        f"DELETE FROM water_observations WHERE plot_id IN ({qmarks})", ids)
+    conn.execute(
+        f"DELETE FROM weather_snapshots WHERE plot_id IN ({qmarks})", ids)
+    conn.execute(
+        f"DELETE FROM leaf_assessments WHERE plot_id IN ({qmarks})", ids)
     conn.execute(
         f"DELETE FROM irrigations WHERE plot_id IN ({qmarks})", ids)
     conn.execute(

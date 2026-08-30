@@ -1,6 +1,13 @@
 from datetime import datetime, timedelta, timezone
 
 from app import db
+from app.db_l1 import (
+    insert_action_confirmation,
+    insert_leaf_assessment,
+    insert_recommendation,
+    insert_water_observation,
+    insert_weather_snapshot_row,
+)
 from scripts.seed_demo import (AREA_HA, DAYS, LAT, LON, PIPE_ZERO_CM,
                                PLOT_NAME, RAIN72_MM, TOTAL_STEPS,
                                _transplant_date, seed_demo)
@@ -132,6 +139,47 @@ def test_seed_idempotent_preserves_non_demo_rows(tmp_path):
         assert names == {PLOT_NAME, "Sawah Petani Asli"}
         assert db.count_rows(conn, "readings", real_pid) == 1
     assert summary["replaced_plots"] == 1
+
+
+def test_reseed_cleans_l1_rows(tmp_path):
+    """Re-seeding a demo plot that has L1 rows (water_observations,
+    recommendations, action_confirmations, weather_snapshots,
+    leaf_assessments) must not trip the FK constraint (CTX-005)."""
+    url = f"sqlite:///{(tmp_path / 'l1.db').as_posix()}"
+    seed_demo(url)
+    with db.session_scope(db.Database(url)) as conn:
+        pid = conn.execute(
+            "SELECT id FROM plots WHERE is_demo = 1").fetchone()["id"]
+        obs = insert_water_observation(
+            conn, plot_id=pid, source="manual", level_cm=-15.2,
+            observed_at="2026-08-30T07:15:00+07:00",
+            received_at="2026-08-30T07:15:01+07:00")
+        snap = insert_weather_snapshot_row(
+            conn, plot_id=pid, source="bmkg", adm4="33.73.01.1003",
+            fetched_at="2026-08-30T07:00:00+07:00",
+            window_end="2026-08-30T07:00:00+07:00", rain72_mm=0.0,
+            availability="ok")
+        rec = insert_recommendation(
+            conn, plot_id=pid, observation_id=obs, weather_snapshot_id=snap,
+            stage="veg_awd", action="WAIT", reason_codes='["SAFE"]',
+            ruleset_version="safe-awd-v1",
+            created_at="2026-08-30T07:15:02+07:00")
+        insert_action_confirmation(
+            conn, recommendation_id=rec, status="performed",
+            created_at="2026-08-30T08:30:00+07:00", volume_m3=12.5)
+        insert_leaf_assessment(
+            conn, plot_id=pid, image_hash="abc123", retention_mode="operational",
+            model_version="rice-v1", guard_result="ok", class_="blast",
+            confidence=0.92, severity="medium",
+            created_at="2026-08-30T08:00:00+07:00")
+    # Re-seed must succeed (the reported failure) and leave L1 tables empty.
+    summary = seed_demo(url)
+    assert summary["replaced_plots"] == 1
+    with db.session_scope(db.Database(url)) as conn:
+        for table in ("water_observations", "recommendations",
+                      "action_confirmations", "weather_snapshots",
+                      "leaf_assessments"):
+            assert db.count_rows(conn, table) == 0
 
 
 def test_seed_engine_paths_real_decisions(tmp_path):
