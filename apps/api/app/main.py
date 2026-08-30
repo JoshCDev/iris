@@ -532,6 +532,15 @@ def assistant_chat(body: ChatIn):
     from app.assistant.agent import chat as agent_chat
     from app.assistant.tools import register_image_dataref
 
+    if len(body.messages) > 40:
+        raise HTTPException(status_code=422,
+                            detail={"code": "chat_too_many_messages",
+                                    "message": "too many messages"})
+    for m in body.messages:
+        if len(m.content) > 8000:
+            raise HTTPException(status_code=422,
+                                detail={"code": "chat_message_too_long",
+                                        "message": "message too long"})
     msgs: list[dict[str, Any]] = []
     for m in body.messages:
         item: dict[str, Any] = {"role": m.role, "content": m.content}

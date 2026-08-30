@@ -10,11 +10,13 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import threading
 import time
 from datetime import datetime, timezone
 from typing import Any
 
 from app.assistant.fallback import offline_reply
+from app.assistant.policy import check_reply_safety
 from app.assistant.prompts import SYSTEM_PROMPT
 from app.assistant.reply_text import plain_reply
 from app.assistant.tools import TOOLS, args_summary, dispatch, get_image_ref
@@ -24,6 +26,12 @@ log = logging.getLogger("iris.assistant")
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MAX_TOOL_HOPS = 6
 CALL_TIMEOUT_S = 60.0
+
+# Bound concurrent live model calls to 2 (AST-007). A blocking acquire IS the
+# bound: at most two chats run `_run_loop` at once, the rest queue briefly.
+# (A non-blocking acquire + 429 would need a fastapi import here and changes
+# the pinned {reply, tool_trace, mode} contract; see task 4.4 report.)
+_CHAT_SEMAPHORE = threading.Semaphore(2)
 
 # --- cheap LLM liveness probe (GET /models, short timeout, ~60 s cache) -----
 
@@ -209,6 +217,13 @@ def _run_loop(client: Any, messages: list[dict[str, Any]]) -> tuple[str, list[di
     return (final.choices[0].message.content or ""), trace
 
 
+def _policy_safe(reply: str) -> str:
+    """Replace a policy-violating reply with the standard refusal (LEAF-009,
+    AST-003); untouched replies pass through."""
+    replacement = check_reply_safety(reply)
+    return replacement if replacement is not None else reply
+
+
 def chat(session_id: str, messages: list[dict[str, Any]],
          client: Any | None = None) -> dict[str, Any]:
     """Entry point: returns pinned {reply, tool_trace, mode}."""
@@ -217,19 +232,20 @@ def chat(session_id: str, messages: list[dict[str, Any]],
     if client is None:
         out = offline_reply(messages)
         mark_fallback_engaged()
-        out["reply"] = plain_reply(out["reply"])
+        out["reply"] = _policy_safe(plain_reply(out["reply"]))
         _persist(session_id, messages, out["reply"], [])
         return out
     try:
-        reply, trace = _run_loop(client, messages)
+        with _CHAT_SEMAPHORE:
+            reply, trace = _run_loop(client, messages)
     except Exception as exc:
         log.warning("live LLM path failed (%s); using offline fallback",
                     type(exc).__name__)
         out = offline_reply(messages)
         mark_fallback_engaged()
-        out["reply"] = plain_reply(out["reply"])
+        out["reply"] = _policy_safe(plain_reply(out["reply"]))
         _persist(session_id, messages, out["reply"], [])
         return out
-    reply = plain_reply(reply)
+    reply = _policy_safe(plain_reply(reply))
     _persist(session_id, messages, reply, trace)
     return {"reply": reply, "tool_trace": trace, "mode": "live"}
