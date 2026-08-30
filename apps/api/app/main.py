@@ -1,8 +1,10 @@
+import asyncio
 import json
 import logging
 import os
 import secrets
 import time as _time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -91,6 +93,12 @@ if not os.environ.get("IRIS_SKIP_DOTENV"):
 
 
 # --- vision singletons (rice pack; loaded lazily + on startup) --------------
+
+# CPU-bound ONNX inference runs on this bounded executor so it never blocks
+# the async event loop (LEAF-010): health/status stay responsive during
+# uploads, and concurrent predicts are capped at 2 workers.
+_VISION_EXECUTOR = ThreadPoolExecutor(max_workers=2,
+                                     thread_name_prefix="iris-vision")
 
 crop_packs = CropPackService()
 inference_service = InferenceService(crop_packs)
@@ -383,10 +391,11 @@ async def vision_predict(
                                      "detail": exc.message})
 
     # Stage 2: real ONNX triage - judge photos take the identical live path.
+    # Run off the event loop on the bounded vision executor (LEAF-010).
     try:
-        result = inference_service.predict(
-            RICE_SLUG, image_bytes, file_name=file_name,
-            quality_metrics=quality.metrics)
+        result = await asyncio.get_running_loop().run_in_executor(
+            _VISION_EXECUTOR, inference_service.predict,
+            RICE_SLUG, image_bytes, file_name, quality.metrics)
     except LowConfidenceRejection as exc:
         return JSONResponse(status_code=422,
                             content={"code": "low_confidence",

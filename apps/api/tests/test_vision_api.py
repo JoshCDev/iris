@@ -124,7 +124,7 @@ def test_solid_image_rejected_422_image_rejected(client):
 
 
 def test_low_confidence_stubbed_rejection(client, monkeypatch):
-    def reject(crop_slug, image_bytes, **kwargs):
+    def reject(crop_slug, image_bytes, file_name=None, quality_metrics=None):
         raise LowConfidenceRejection(
             confidence=0.31, predicted_class="brown_spot",
             message="The model produced a low-confidence prediction "
