@@ -29,6 +29,8 @@ from app.receipts import (
     receipt_json,
 )
 from app.routers import evidence as evidence_router
+from app.routers import health as health_router
+from app.routers import plots as plots_router
 from app.vision.advisory import AdvisoryService
 from app.vision.crop_packs import RICE_SLUG, CropPackService
 from app.vision.image_guard import ImageGuardService, ImageRejectedError
@@ -69,6 +71,8 @@ app.add_middleware(
 )
 
 app.include_router(evidence_router.router)
+app.include_router(health_router.router)
+app.include_router(plots_router.router)
 
 
 db.init_db(get_settings().iris_db)
