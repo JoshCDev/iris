@@ -46,7 +46,7 @@ export function WaterEntryForm({ plotId, onSaved }: { plotId: number; onSaved: (
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const level = Number(value);
-    if (Number.isNaN(level) || level < -30 || level > 30) {
+    if (value.trim() === "" || Number.isNaN(level) || level < -30 || level > 30) {
       setError(t("water.implausible"));
       return;
     }

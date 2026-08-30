@@ -1,10 +1,15 @@
 // apps/web/__tests__/water-entry.test.tsx
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { WaterEntryForm } from "@/app/water/WaterClient";
 import { LocaleProvider } from "@/lib/i18n";
 import * as v1 from "@/lib/api/v1";
+
+// Vitest runs with `globals: false`, so @testing-library/react's auto-cleanup
+// is not registered; without this the second test would see the first test's
+// DOM and its `getByRole("button", { name: /simpan/i })` would match twice.
+afterEach(cleanup);
 
 describe("WaterEntryForm", () => {
   beforeEach(() => {
@@ -28,5 +33,12 @@ describe("WaterEntryForm", () => {
     await userEvent.type(screen.getByLabelText(/tinggi air/i), "-15.2");
     await userEvent.click(screen.getByRole("button", { name: /simpan/i }));
     await waitFor(() => expect(v1.postV1WaterObservation).toHaveBeenCalledWith(4, { level_cm: -15.2, source: "manual" }));
+  });
+
+  it("rejects an empty submit without posting a false 0 cm observation", async () => {
+    render(<LocaleProvider><WaterEntryForm plotId={4} onSaved={() => {}} /></LocaleProvider>);
+    await userEvent.click(screen.getByRole("button", { name: /simpan/i }));
+    expect(v1.postV1WaterObservation).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/nilai di luar rentang wajar/i);
   });
 });
