@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { TracePanel } from "@/components/ToolTraceChip";
 import { postChat, type ChatMessage, type ToolHop } from "@/lib/api";
+import { usePlot } from "@/lib/PlotContext";
+import { actionVerb, classLabelId, fmtLevel } from "@/lib/format";
 
 function displayReply(raw: string): string {
   return raw
@@ -48,6 +50,7 @@ interface DisplayMessage {
 
 export function AssistantClient() {
   const searchParams = useSearchParams();
+  const { today } = usePlot();
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -181,6 +184,21 @@ export function AssistantClient() {
 
   return (
     <div className="chat-shell">
+      {/* Live plot context: the same records Water/Today read, so the leaf
+          screened on the Leaf page shows up here too. */}
+      {today && (
+        <div className="assistant-context" aria-label="Plot context">
+          <strong>{today.plot.name}</strong>
+          <span>
+            {today.recommendation
+              ? `${actionVerb(today.recommendation.action)} · water ${fmtLevel(today.water.level_cm)}`
+              : "No recommendation yet"}
+          </span>
+          <span>
+            Leaf: {today.latest_leaf ? classLabelId(today.latest_leaf.class ?? "none") : "no photo yet"}
+          </span>
+        </div>
+      )}
       <div className="chat-scroll" role="log" aria-live="polite" aria-busy={busy} ref={scrollRef}>
           {messages.length === 0 && (
             <div className="chat-welcome">

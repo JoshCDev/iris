@@ -194,9 +194,9 @@ def test_reseed_cleans_l1_rows(tmp_path):
     assert summary["replaced_plots"] == 1
     with db.session_scope(db.Database(url)) as conn:
         # Manual rows (confirmation + leaf assessment) are gone; the seeder
-        # re-created its own leaf assessments.
+        # seeds no leaf assessments (the leaf story starts empty).
         assert db.count_rows(conn, "action_confirmations") == 0
-        assert db.count_rows(conn, "leaf_assessments") == 2
+        assert db.count_rows(conn, "leaf_assessments") == 0
         # The v1 mirror exists at full cadence (one per simulated reading;
         # the grid ends at seed time, so no extra anchor row is needed).
         assert db.count_rows(conn, "water_observations") == TOTAL_STEPS

@@ -18,14 +18,14 @@ Contract:
   realistic AWD sawtooth with no HOLD_FOR_RAIN (no rain to hold for)
 - battery voltage 3.8-4.1 V
 - the series is mirrored into the v1 tables (water_observations,
-  weather_snapshots, recommendations — superseded except the latest)
-  plus 2 leaf_assessments, so every page reads the same records
+  weather_snapshots, recommendations — superseded except the latest);
+  no leaf assessments are seeded, so the leaf story is filled by the
+  farmer's first upload and stays connected across pages
 - idempotent: re-running replaces all is_demo=1 rows
 """
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -41,7 +41,6 @@ from app import db
 from app.config import get_settings
 from app.db import session_scope
 from app.db_l1 import (
-    insert_leaf_assessment,
     insert_recommendation,
     insert_water_observation,
     insert_weather_snapshot_row,
@@ -327,57 +326,6 @@ def _seed_v1_records(conn, plot_id: int, series: list[dict[str, Any]]) -> dict[s
             "recommendations": n_rec}
 
 
-def _seed_leaf_assessments(conn, plot_id: int, now: datetime) -> int:
-    """Run the REAL triage pipeline on two bundled sample images and store
-    the results as demo `leaf_assessments` rows (is_demo=1) — the v1 leaf
-    records Today reads."""
-    pack_dir = Path(__file__).resolve().parents[1] / "crop_packs" / "rice"
-    samples = ["rice-blast-demo.jpg", "rice-blast-demo.webp"]
-    if not (pack_dir / "model.onnx").exists():
-        return 0
-    services = _vision_services()
-    if services is None:
-        return 0
-    packs, inference, guard, advisory = services
-
-    inserted = 0
-    for n, name in enumerate(samples):
-        path = pack_dir / name
-        if not path.exists():
-            continue
-        image_bytes = path.read_bytes()
-        try:
-            quality = guard.analyze(image_bytes)
-            result = inference.predict(
-                RICE_SLUG, image_bytes, file_name=name,
-                quality_metrics=quality.metrics)
-        except Exception:
-            continue
-        predicted = result.predicted
-        disease_class = packs.get_class_by_slug(RICE_SLUG,
-                                                predicted.class_slug)
-        risk_rule = packs.risk_rule_for(RICE_SLUG, predicted.class_slug)
-        _score, severity_lbl, _review = calculate_severity(
-            class_slug=predicted.class_slug,
-            confidence=predicted.confidence,
-            risk_weight=float(disease_class["risk_weight"]),
-            recent_same_area_count=0,
-            default_expert_review=bool(risk_rule.get("default_expert_review",
-                                                     False)),
-        )
-        created = (now.astimezone(timezone.utc)
-                   - timedelta(minutes=15 * n)).isoformat()
-        insert_leaf_assessment(
-            conn, plot_id=plot_id,
-            image_hash=hashlib.sha256(image_bytes).hexdigest(),
-            retention_mode="operational", model_version=result.model_version,
-            guard_result="ok", class_=predicted.class_slug,
-            confidence=float(predicted.confidence), severity=severity_lbl,
-            evidence_type="public-dataset", created_at=created, demo=True)
-        inserted += 1
-    return inserted
-
-
 def seed_demo(db_url: str | None = None, *,
               now: datetime | None = None) -> dict[str, Any]:
     # The grid ends at seed time (rounded to 15 min) so the demo is current
@@ -415,7 +363,10 @@ def seed_demo(db_url: str | None = None, *,
             " AND action = 'HOLD_FOR_RAIN'", (plot_id,)).fetchone()["n"]
         vision_reports = _seed_vision_reports(conn, plot_id, now_dt)
         v1 = _seed_v1_records(conn, plot_id, series)
-        leaf_assessments = _seed_leaf_assessments(conn, plot_id, now_dt)
+        # No leaf assessments are seeded: the leaf story starts empty and is
+        # filled by the farmer's first upload on the Leaf page, so Water and
+        # Ask reflect exactly what was screened.
+        leaf_assessments = 0
     return {
         "plot_id": plot_id,
         "name": PLOT_NAME,
