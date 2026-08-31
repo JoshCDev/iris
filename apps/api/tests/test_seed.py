@@ -40,7 +40,7 @@ def test_seed_contract_counts_and_plot(tmp_path):
     summary = seed_demo(url)
     assert summary["readings"] == TOTAL_STEPS == 2880
     assert summary["decisions"] == 2880
-    assert summary["hold_for_rain"] >= 1
+    assert summary["irrigations"] >= 1
     _, plots, readings, _, _, _ = _rows(url)
     assert len(plots) == 1
     plot = plots[0]
@@ -65,7 +65,6 @@ def test_seed_deterministic_seed_twice_same_db(tmp_path):
     second_run = _rows(url)
     assert s1["readings"] == s2["readings"]
     assert s1["irrigations"] == s2["irrigations"]
-    assert s1["hold_for_rain"] == s2["hold_for_rain"]
     # identical first reading ts + identical series content
     assert first_run[2][0]["ts"] == second_run[2][0]["ts"]
     assert [r["level_cm"] for r in first_run[2]] == \
@@ -99,20 +98,18 @@ def test_seed_series_ends_at_seed_time(tmp_path):
     assert 0 <= age_minutes <= 16  # within one 15-min step of seeding
 
 
-def test_seed_hold_for_rain_only_with_wet_forecast(tmp_path):
-    url = f"sqlite:///{(tmp_path / 'e.db').as_posix()}"
+def test_seed_rain_free_scenario(tmp_path):
+    """Rain-free demo matches the E3 backtest: every decision carries a
+    0 mm forecast, there are no rain-hold decisions, and IRRIGATE cycles
+    refill the pond."""
+    url = f"sqlite:///{(tmp_path / 'rainfree.db').as_posix()}"
     summary = seed_demo(url)
-    assert summary["hold_for_rain"] >= 1
+    assert summary["hold_for_rain"] == 0
     _, _, _, decisions, _, _ = _rows(url)
-    holds = [d for d in decisions if d["action"] == "HOLD_FOR_RAIN"]
-    assert all(float(d["rain72_mm"]) >= 15.0 for d in holds)
-    # Holds may only occur on days where the wet forecast was present.
-    wet_days = {
-        datetime.fromisoformat(d["ts"]).astimezone(WIB).timetuple().tm_yday
-        for d in decisions if float(d["rain72_mm"]) >= 15.0}
-    hold_days = {datetime.fromisoformat(d["ts"]).astimezone(WIB).timetuple()
-                 .tm_yday for d in holds}
-    assert hold_days <= wet_days
+    assert all(float(d["rain72_mm"]) == 0.0 for d in decisions)
+    actions = {d["action"] for d in decisions}
+    assert "IRRIGATE" in actions
+    assert "HOLD_FOR_RAIN" not in actions
 
 
 def test_seed_readings_grid_and_bands(tmp_path):
@@ -256,7 +253,8 @@ def test_seed_engine_paths_real_decisions(tmp_path):
     seed_demo(url)
     _, _, _, decisions, irrigations, _ = _rows(url)
     actions = {d["action"] for d in decisions}
-    assert {"WAIT", "IRRIGATE", "HOLD_FOR_RAIN"} <= actions
+    assert {"WAIT", "IRRIGATE"} <= actions
+    assert "HOLD_FOR_RAIN" not in actions  # rain-free scenario (0 mm)
     assert all(d["stage"] in ("establishment", "veg_awd") for d in decisions)
     for i in irrigations:
         assert float(i["volume_m3"]) > 0.0

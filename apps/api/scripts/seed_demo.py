@@ -13,10 +13,9 @@ Contract:
 - drawdown 0.8 cm/day (docs/METHODOLOGY.md E3 assumption) with a diurnal
   cycle and day-to-day ET variation; E3's 0.5x below-zero refinement is
   NOT applied so the AWD trigger is exercised inside the demo window
-- one synthetic storm on season days 49-51 (22 mm total, rain72_mm = 22)
-  lifting the pond ~1 cm and producing HOLD_FOR_RAIN while the level is
-  below the -15 cm trigger; the post-storm dry-down re-crosses the
-  trigger, producing IRRIGATE (+ refill to +5 cm)
+- rain-free scenario (0 mm), matching the E3 backtest: the dry-down
+  crosses the -15 cm trigger and IRRIGATE refills to +5 cm, producing a
+  realistic AWD sawtooth with no HOLD_FOR_RAIN (no rain to hold for)
 - battery voltage 3.8-4.1 V
 - the series is mirrored into the v1 tables (water_observations,
   weather_snapshots, recommendations — superseded except the latest)
@@ -69,25 +68,17 @@ CADENCE_MIN = 15
 DAYS = 30
 TOTAL_STEPS = DAYS * STEPS_PER_DAY  # 2880
 
-# The 30-day window starts this many season days after transplant, so the
-# window stays inside the vegetative/AWD stage while still containing a
-# full +5 -> -15 dry-down at the documented 0.8 cm/day rate.
-SEASON_START_DAY = 24
-TRANSPLANT_OFFSET_DAYS = SEASON_START_DAY + DAYS  # 54
+# The 30-day window starts this many season days after transplant, so it
+# stays inside the vegetative/AWD stage while containing a full +5 -> -15
+# dry-down and a refill cycle at the documented 0.8 cm/day rate.
+SEASON_START_DAY = 14
+TRANSPLANT_OFFSET_DAYS = SEASON_START_DAY + DAYS  # 44
 
 # docs/METHODOLOGY.md (E3): 0.8 cm/day reference drawdown.
 BASE_DRAWDOWN_CM_PER_DAY = 0.8
 
-# Synthetic storm: season days (transplant-relative), 22 mm total across
-# the three days (rain72_mm stays 22 so HOLD_FOR_RAIN fires while the level
-# sits below the -15 cm trigger).
-RAIN_EVENT_DAYS = (49, 50, 51)
-RAIN72_MM = 22.0
-
-# During a storm day, rain reduces the ET-driven drawdown to this fraction
-# of the normal rate — the level keeps descending (slowly) instead of
-# pinning on the trigger.
-STORM_DRAWDOWN_FRACTION = 0.40
+# Rain-free demo scenario, matching the E3 backtest (0 mm rain).
+RAIN72_MM = 0.0
 
 VEG_TRIGGER_CM = -15.0
 
@@ -117,10 +108,11 @@ def _diurnal_factor(minute_of_day: float) -> float:
 def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
     """Generate readings+engine decisions for the whole window.
 
-    Drawdown follows the documented 0.8 cm/day reference (METHODOLOGY E3)
-    with a diurnal cycle, day-to-day ET variation, and a small sensor
-    jitter. The simulated storm lifts the pond ~1 cm, so the trace is a
-    realistic field-tube record rather than a perfectly even sawtooth.
+    Rain-free scenario matching the E3 backtest (0 mm rain): drawdown
+    follows the documented 0.8 cm/day reference (METHODOLOGY E3) with a
+    diurnal cycle, day-to-day ET variation, and a small sensor jitter.
+    Each dry-down crosses the -15 cm trigger and IRRIGATE refills to
+    +5 cm, producing a realistic AWD sawtooth.
     """
     rng_day = random.Random(42)       # day-to-day drainage-rate variation
     rng_step = random.Random(2024)    # within-day drawdown jitter
@@ -136,12 +128,6 @@ def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
         round((per_day_cm / STEPS_PER_DAY) * rng_day.uniform(0.55, 1.45), 5)
         for _ in range(DAYS)
     ]
-    # A dry, windy spell just before the storm: drainage speeds up so the
-    # pond crosses the -15 cm trigger as the wet forecast arrives, letting
-    # HOLD_FOR_RAIN fire and the post-storm re-cross produce IRRIGATE.
-    for d in (47, 48):
-        day_rates[d - SEASON_START_DAY] = round(
-            day_rates[d - SEASON_START_DAY] * 1.6, 5)
 
     for i in range(TOTAL_STEPS):
         day_index = SEASON_START_DAY + i // STEPS_PER_DAY
@@ -161,12 +147,6 @@ def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
             rate = day_rates[day_index - SEASON_START_DAY] \
                 * _diurnal_factor(minute_of_day) \
                 * rng_step.uniform(0.85, 1.15)
-            # During the storm, rain slows (but does not stop) the ET-driven
-            # drawdown: the level keeps descending through the -15 cm trigger
-            # instead of pinning on it, which reads as a live field record
-            # rather than a stuck sensor.
-            if day_index in RAIN_EVENT_DAYS:
-                rate = rate * STORM_DRAWDOWN_FRACTION
             level = level - rate
 
         # Small sensor noise on the reported reading (sub-cm jitter).
@@ -200,8 +180,9 @@ def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
 
 
 def rain72_mm(day_index: int) -> float:
-    """72 h forecast the scheduler sees on a given day (22 mm on rain days)."""
-    return RAIN72_MM if day_index in RAIN_EVENT_DAYS else 0.0
+    """72 h forecast the scheduler sees on a given day (0 mm: rain-free
+    demo scenario matching the E3 backtest)."""
+    return RAIN72_MM
 
 
 def _decide_for(level_cm: float, stage, day_index: int):
@@ -212,10 +193,11 @@ def _decide_for(level_cm: float, stage, day_index: int):
 def _build_series(now: datetime) -> list[dict[str, Any]]:
     start = _grid_start_utc(now)
     series = _simulate_series(start)
-    holds = sum(1 for s in series if s["action"] == "HOLD_FOR_RAIN")
-    if holds < 1:
+    irrigations = sum(1 for s in series if s["action"] == "IRRIGATE")
+    if irrigations < 1:
         raise RuntimeError(
-            "seeder contract violated: no HOLD_FOR_RAIN decision produced")
+            "seeder contract violated: expected >= 1 IRRIGATE cycle "
+            f"(got {irrigations})")
     return series
 
 
