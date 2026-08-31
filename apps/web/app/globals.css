@@ -1423,7 +1423,7 @@ video {
 .chat-shell {
   display: flex;
   flex-direction: column;
-  max-height: min(68vh, 640px);
+  height: min(78vh, 900px);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #ffffff;
@@ -1434,16 +1434,16 @@ video {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 140px;
-  max-height: 360px;
-  padding: 12px 14px;
+  min-height: 200px;
+  flex: 1 1 auto;
+  padding: 14px 18px;
 }
 
 .chat-msg {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-width: min(560px, 94%);
+  max-width: min(760px, 96%);
 }
 
 .chat-msg--user {
