@@ -78,16 +78,16 @@ TRANSPLANT_OFFSET_DAYS = SEASON_START_DAY + DAYS  # 54
 # docs/METHODOLOGY.md (E3): 0.8 cm/day reference drawdown.
 BASE_DRAWDOWN_CM_PER_DAY = 0.8
 
-# Synthetic storm: season days (transplant-relative), 22 mm total split
-# 5/12/5 mm across the three days (rain72_mm stays 22 so HOLD_FOR_RAIN
-# fires while the level sits below the -15 cm trigger).
+# Synthetic storm: season days (transplant-relative), 22 mm total across
+# the three days (rain72_mm stays 22 so HOLD_FOR_RAIN fires while the level
+# sits below the -15 cm trigger).
 RAIN_EVENT_DAYS = (49, 50, 51)
 RAIN72_MM = 22.0
-DAY_RAIN_MM = (5.0, 12.0, 5.0)
 
-# Rain-to-pond efficiency: only a fraction of the fallen rain actually
-# raises the field-tube level (canopy interception, bund overflow, runoff).
-RAIN_RISE_FRACTION = 0.45
+# During a storm day, rain reduces the ET-driven drawdown to this fraction
+# of the normal rate — the level keeps descending (slowly) instead of
+# pinning on the trigger.
+STORM_DRAWDOWN_FRACTION = 0.40
 
 VEG_TRIGGER_CM = -15.0
 
@@ -161,16 +161,13 @@ def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
             rate = day_rates[day_index - SEASON_START_DAY] \
                 * _diurnal_factor(minute_of_day) \
                 * rng_step.uniform(0.85, 1.15)
-            level = level - rate
-            # The simulated storm actually raises the pond: the day's rain
-            # falls across the day (afternoon convective burst), and a
-            # fraction of it reaches the field tube.
+            # During the storm, rain slows (but does not stop) the ET-driven
+            # drawdown: the level keeps descending through the -15 cm trigger
+            # instead of pinning on it, which reads as a live field record
+            # rather than a stuck sensor.
             if day_index in RAIN_EVENT_DAYS:
-                event_pos = RAIN_EVENT_DAYS.index(day_index)
-                mm_per_step = DAY_RAIN_MM[event_pos] / STEPS_PER_DAY
-                burst = 1.0 + 1.6 * math.exp(
-                    -((minute_of_day - 960.0) / 240.0) ** 2)
-                level = level + mm_per_step * burst * RAIN_RISE_FRACTION / 10.0
+                rate = rate * STORM_DRAWDOWN_FRACTION
+            level = level - rate
 
         # Small sensor noise on the reported reading (sub-cm jitter).
         reported = level + rng_sensor.uniform(-0.05, 0.05)
