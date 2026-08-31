@@ -6,13 +6,21 @@ seeded decisions/irrigations are what the audited engine would have produced.
 
 Contract:
 - plot "Sawah Demo - Salatiga" (1 ha, pipe_zero 30 cm, lat -7.3305,
-  lon 110.5064, transplant_date = today(WIB) - 30 d, is_demo = 1)
-- 2880 readings = 30 days x 96/day @ 15 min, anchored to transplant midnight
-  WIB (deterministic within a day)
-- diurnal-noise drawdown sawtooth between -15 and +5 cm
-- one synthetic rain event on days 18-19 (rain72_mm = 22) producing >= 1
-  HOLD_FOR_RAIN decision
+  lon 110.5064, transplant_date = today(WIB) - 54 d, is_demo = 1)
+- 2880 readings = 30 days x 96/day @ 15 min, covering season days 24-53
+  (all vegetative/AWD), anchored to transplant midnight + 24 d
+  (deterministic within a day)
+- drawdown 0.8 cm/day (docs/METHODOLOGY.md E3 assumption) with a diurnal
+  cycle and day-to-day ET variation; E3's 0.5x below-zero refinement is
+  NOT applied so the AWD trigger is exercised inside the demo window
+- one synthetic storm on season days 49-51 (22 mm total, rain72_mm = 22)
+  lifting the pond ~1 cm and producing HOLD_FOR_RAIN while the level is
+  below the -15 cm trigger; the post-storm dry-down re-crosses the
+  trigger, producing IRRIGATE (+ refill to +5 cm)
 - battery voltage 3.8-4.1 V
+- the series is mirrored into the v1 tables (water_observations,
+  weather_snapshots, recommendations — superseded except the latest)
+  plus 2 leaf_assessments, so every page reads the same records
 - idempotent: re-running replaces all is_demo=1 rows
 """
 from __future__ import annotations
@@ -61,13 +69,21 @@ CADENCE_MIN = 15
 DAYS = 30
 TOTAL_STEPS = DAYS * STEPS_PER_DAY  # 2880
 
-RAIN_EVENT_DAYS = (16, 17, 18)
+# The 30-day window starts this many season days after transplant, so the
+# window stays inside the vegetative/AWD stage while still containing a
+# full +5 -> -15 dry-down at the documented 0.8 cm/day rate.
+SEASON_START_DAY = 24
+TRANSPLANT_OFFSET_DAYS = SEASON_START_DAY + DAYS  # 54
+
+# docs/METHODOLOGY.md (E3): 0.8 cm/day reference drawdown.
+BASE_DRAWDOWN_CM_PER_DAY = 0.8
+
+# Synthetic storm: season days (transplant-relative), 22 mm total split
+# 5/12/5 mm across the three days (rain72_mm stays 22 so HOLD_FOR_RAIN
+# fires while the level sits below the -15 cm trigger).
+RAIN_EVENT_DAYS = (49, 50, 51)
 RAIN72_MM = 22.0
-# Simulated storm intensity per rain-event day, in mm per 15-minute step.
-# Sums to 22 mm over the 3-day event (day 16 light showers ~5 mm, day 17
-# peak ~12 mm, day 18 tail ~5 mm) so RAIN72_MM stays the wet-forecast value
-# the scheduler sees and HOLD_FOR_RAIN still fires on days 16-18.
-STORM_MM_PER_STEP = (0.8, 2.0, 0.8)
+DAY_RAIN_MM = (5.0, 12.0, 5.0)
 
 # Rain-to-pond efficiency: only a fraction of the fallen rain actually
 # raises the field-tube level (canopy interception, bund overflow, runoff).
@@ -77,13 +93,16 @@ VEG_TRIGGER_CM = -15.0
 
 
 def _transplant_date(today: date | None = None) -> date:
-    return ((today or datetime.now(WIB).date()) - timedelta(days=DAYS))
+    return ((today or datetime.now(WIB).date())
+            - timedelta(days=TRANSPLANT_OFFSET_DAYS))
 
 
 def _grid_start_utc(transplant: date) -> datetime:
-    """Transplant midnight WIB expressed in UTC."""
-    return datetime(transplant.year, transplant.month, transplant.day,
-                    tzinfo=WIB).astimezone(timezone.utc)
+    """Season-day SEASON_START_DAY midnight WIB expressed in UTC."""
+    start = (datetime(transplant.year, transplant.month, transplant.day,
+                      tzinfo=WIB)
+             + timedelta(days=SEASON_START_DAY))
+    return start.astimezone(timezone.utc)
 
 
 def _diurnal_factor(minute_of_day: float) -> float:
@@ -94,10 +113,10 @@ def _diurnal_factor(minute_of_day: float) -> float:
 def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
     """Generate readings+engine decisions for the whole window.
 
-    The trace is deliberately not a clean sawtooth: drainage varies
-    day to day (weather-driven ET), the simulated storm actually lifts
-    the pond, and the sensor adds a little jitter — closer to a real
-    field-tube record than a perfectly even dry-down.
+    Drawdown follows the documented 0.8 cm/day reference (METHODOLOGY E3)
+    with a diurnal cycle, day-to-day ET variation, and a small sensor
+    jitter. The simulated storm lifts the pond ~1 cm, so the trace is a
+    realistic field-tube record rather than a perfectly even sawtooth.
     """
     rng_day = random.Random(42)       # day-to-day drainage-rate variation
     rng_step = random.Random(2024)    # within-day drawdown jitter
@@ -106,24 +125,22 @@ def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     level = REFILL_CM
 
-    # Drainage base rate per day (cm per 15-min step), varying ±45% around
-    # 0.10 cm to mimic hotter/drier days vs cooler/cloudier ones.
+    # Per-step drawdown (cm) varying ±45% around the documented 0.8 cm/day
+    # to mimic hotter/drier days vs cooler/cloudier ones.
+    per_day_cm = BASE_DRAWDOWN_CM_PER_DAY
     day_rates = [
-        round(0.10 * rng_day.uniform(0.55, 1.45), 4)
+        round((per_day_cm / STEPS_PER_DAY) * rng_day.uniform(0.55, 1.45), 5)
         for _ in range(DAYS)
     ]
-    # A couple of short "cooler/cloudier" spells where drainage slows for a
-    # day or two (lower ET), then recovers — keeps the dry-down irregular.
-    for spell_start in (9, 23):
-        for d in range(spell_start, min(spell_start + 2, DAYS)):
-            day_rates[d] = round(day_rates[d] * 0.55, 4)
-    # A dry, windy couple of days just before the storm: drainage speeds up so
-    # the pond actually reaches the AWD trigger in time for the rain-hold
-    # logic to fire when the wet forecast arrives (realistic pre-storm dry-down).
-    for d in (15, 16):
-        day_rates[d] = round(day_rates[d] * 2.1, 4)
+    # A dry, windy spell just before the storm: drainage speeds up so the
+    # pond crosses the -15 cm trigger as the wet forecast arrives, letting
+    # HOLD_FOR_RAIN fire and the post-storm re-cross produce IRRIGATE.
+    for d in (47, 48):
+        day_rates[d - SEASON_START_DAY] = round(
+            day_rates[d - SEASON_START_DAY] * 1.6, 5)
+
     for i in range(TOTAL_STEPS):
-        day_index = i // STEPS_PER_DAY
+        day_index = SEASON_START_DAY + i // STEPS_PER_DAY
         step_in_day = i % STEPS_PER_DAY
         minute_of_day = step_in_day * CADENCE_MIN
         ts = start_ts + timedelta(minutes=CADENCE_MIN * i)
@@ -137,22 +154,19 @@ def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
             level = REFILL_CM + 0.05 + wiggle \
                 + rng_sensor.uniform(-0.06, 0.06)
         else:
-            rate = day_rates[day_index] * _diurnal_factor(minute_of_day) \
+            rate = day_rates[day_index - SEASON_START_DAY] \
+                * _diurnal_factor(minute_of_day) \
                 * rng_step.uniform(0.85, 1.15)
             level = level - rate
-            # The simulated storm actually raises the pond: each rain-event
-            # day adds a burst of rainfall through the day that lifts the
-            # field-tube level (a fraction of the rain reaches the pond).
+            # The simulated storm actually raises the pond: the day's rain
+            # falls across the day (afternoon convective burst), and a
+            # fraction of it reaches the field tube.
             if day_index in RAIN_EVENT_DAYS:
                 event_pos = RAIN_EVENT_DAYS.index(day_index)
-                mm = STORM_MM_PER_STEP[event_pos]
-                # Bursts in the afternoon/evening (typical convective rain),
-                # tapering through the day.
+                mm_per_step = DAY_RAIN_MM[event_pos] / STEPS_PER_DAY
                 burst = 1.0 + 1.6 * math.exp(
                     -((minute_of_day - 960.0) / 240.0) ** 2)
-                level = level + mm * burst * RAIN_RISE_FRACTION / 10.0
-                # Heavy rain can also soften the dry-down that step.
-                level = level + rng_step.uniform(0.0, 0.02)
+                level = level + mm_per_step * burst * RAIN_RISE_FRACTION / 10.0
 
         # Small sensor noise on the reported reading (sub-cm jitter).
         reported = level + rng_sensor.uniform(-0.05, 0.05)
