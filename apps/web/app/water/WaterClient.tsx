@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { CrossLinks } from "@/components/CrossLinks";
 import { DemoBadge } from "@/components/DemoBadge";
@@ -9,7 +9,7 @@ import { LevelChart } from "@/components/LevelChart";
 import { ReceiptCard } from "@/components/ReceiptCard";
 import { StageTimeline } from "@/components/StageTimeline";
 import { usePlot } from "@/lib/PlotContext";
-import { ApiError, getReceipt, type GreenReceipt, type PlotStatus } from "@/lib/api";
+import { ApiError, getHistory, getReceipt, type GreenReceipt, type PlotHistory, type PlotStatus } from "@/lib/api";
 import {
   getV1WaterHistory,
   postV1WaterObservation,
@@ -89,6 +89,7 @@ export function WaterClient() {
   const { t } = useLocale();
   const today = plot.today;
   const [history, setHistory] = useState<WaterHistory | null>(null);
+  const [legacyHistory, setLegacyHistory] = useState<PlotHistory | null>(null);
   const [receipt, setReceipt] = useState<GreenReceipt | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [simBusy, setSimBusy] = useState(false);
@@ -100,6 +101,13 @@ export function WaterClient() {
       setHistory(await getV1WaterHistory(plot.activePlotId, { limit: 100 }));
     } catch {
       // keep previous rows; the plot context refresh covers errors
+    }
+    try {
+      // Dense 7-day sensor record (demo series). Plotted as the continuous
+      // line; the v1 observations (manual/sensor entries) overlay on top.
+      setLegacyHistory(await getHistory(plot.activePlotId, 7));
+    } catch {
+      // non-fatal; the v1 observations alone still render
     }
     try {
       setReceipt(await getReceipt(plot.activePlotId, 100));
@@ -142,6 +150,20 @@ export function WaterClient() {
   const rec = today?.recommendation;
   const weather = today?.weather;
   const readings = history?.observations ?? [];
+
+  // Chart series: the dense legacy 7-day record plus the v1 observations
+  // (manual/sensor) overlaid at their true timestamps, deduped and sorted.
+  const chartReadings = useMemo(() => {
+    const merged = new Map<string, { ts: string; dist_cm: number; level_cm: number; batt_v: number | null }>();
+    for (const r of legacyHistory?.readings ?? []) {
+      merged.set(r.ts, { ts: r.ts, dist_cm: r.dist_cm, level_cm: r.level_cm, batt_v: r.batt_v });
+    }
+    // v1 rows win on timestamp ties (they are the authoritative records).
+    for (const o of readings) {
+      merged.set(o.observed_at, toReading(o));
+    }
+    return [...merged.values()].sort((a, b) => a.ts.localeCompare(b.ts));
+  }, [legacyHistory, readings]);
 
   return (
     <div className="grid">
@@ -253,10 +275,10 @@ export function WaterClient() {
         <div className="section-heading" style={{ marginBottom: 12 }}>
           <h3>7-day water-level trace</h3>
           <span className="small muted">
-            {readings.length > 0 ? `${fmtInt(readings.length)} observations` : ""}
+            {chartReadings.length > 0 ? `${fmtInt(chartReadings.length)} readings` : ""}
           </span>
         </div>
-        <LevelChart readings={readings.map(toReading)} dataKind={water?.kind ?? null} />
+        <LevelChart readings={chartReadings} dataKind={water?.kind ?? null} />
       </div>
 
       {/* Receipt */}
