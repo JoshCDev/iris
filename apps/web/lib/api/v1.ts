@@ -1,6 +1,6 @@
 // apps/web/lib/api/v1.ts
 // Typed v1 client — the only layer the frontend consumes (WEBAPP_SPEC §10.4).
-import { request } from "@/lib/api";
+import { request, type FusionResult } from "@/lib/api";
 
 export interface PlotSummary {
   id: number;
@@ -73,7 +73,10 @@ export type DataKind = "manual" | "sensor" | "simulation" | "other";
 export interface TodayPayload {
   plot: PlotSummary;
   freshness: { state: string; last_observed_at: string | null };
-  water: { level_cm: number | null; source: string | null; kind?: DataKind; stage: string };
+  water: {
+    level_cm: number | null; source: string | null; kind?: DataKind;
+    stage: string; stage_days: number;
+  };
   weather: WeatherState;
   recommendation: Recommendation | null;
   latest_leaf: {
@@ -84,6 +87,7 @@ export interface TodayPayload {
 
 export interface WaterObservationRow {
   id: number; level_cm: number; source: string; kind?: DataKind;
+  raw_distance?: number | null;
   observed_at: string; received_at: string;
   quality_state: string; demo: boolean;
 }
@@ -160,13 +164,54 @@ export function postV1WaterObservation(
 
 export function getV1WaterHistory(
   plotId: number,
-  opts: { limit?: number; offset?: number } = {},
+  opts: { limit?: number; offset?: number; days?: number } = {},
 ): Promise<WaterHistory> {
   const q = new URLSearchParams();
   if (opts.limit) q.set("limit", String(opts.limit));
   if (opts.offset) q.set("offset", String(opts.offset));
+  if (opts.days) q.set("days", String(opts.days));
   const qs = q.toString();
   return request<WaterHistory>(`/v1/plots/${plotId}/water-history${qs ? `?${qs}` : ""}`);
+}
+
+export interface LeafAssessment {
+  id: number;
+  class: string | null;
+  class_label_en?: string;
+  confidence: number | null;
+  severity: string | null;
+  evidence_type: string;
+  model_version?: string;
+  disclaimer?: string;
+  advisory_id?: string;
+  advisory_en?: string;
+  fusion?: FusionResult | null;
+  is_demo?: boolean;
+  demo?: boolean;
+  created_at: string;
+}
+
+export function postV1LeafAssessment(
+  plotId: number,
+  file: File,
+): Promise<LeafAssessment> {
+  const form = new FormData();
+  form.append("image", file);
+  return request<LeafAssessment>(`/v1/plots/${plotId}/leaf-assessments`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function getV1LeafAssessments(
+  plotId: number,
+  opts: { limit?: number; offset?: number } = {},
+): Promise<{ plot_id: number; total: number; assessments: LeafAssessment[] }> {
+  const q = new URLSearchParams();
+  if (opts.limit) q.set("limit", String(opts.limit));
+  if (opts.offset) q.set("offset", String(opts.offset));
+  const qs = q.toString();
+  return request(`/v1/plots/${plotId}/leaf-assessments${qs ? `?${qs}` : ""}`);
 }
 
 export function postV1Confirmation(

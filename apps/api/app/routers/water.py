@@ -88,12 +88,16 @@ def _today_payload(conn, plot) -> dict[str, Any]:
 
     freshness = {"state": "current", "last_observed_at": None}
     water = {"level_cm": None, "source": None, "kind": "other",
-             "stage": _stage_for(plot)}
+             "stage": _stage_for(plot),
+             "stage_days": _stage_days(
+                 date.fromisoformat(plot["transplant_date"]))}
     if obs is not None:
         freshness["last_observed_at"] = obs["observed_at"]
         water = {"level_cm": float(obs["level_cm"]),
                  "source": obs["source"], "kind": _data_kind(obs["source"]),
-                 "stage": _stage_for(plot)}
+                 "stage": _stage_for(plot),
+                 "stage_days": _stage_days(
+                     date.fromisoformat(plot["transplant_date"]))}
 
     recommendation = None
     if rec is not None:
@@ -169,21 +173,65 @@ def plot_weather(plot_id: int):
 
 
 @router.get("/{plot_id}/water-history")
-def water_history(plot_id: int, limit: int = 20, offset: int = 0):
-    limit = max(1, min(int(limit), 100))
-    offset = max(0, int(offset))
+def water_history(plot_id: int, limit: int = 20, offset: int = 0,
+                  days: int | None = None):
+    """Paginated history (limit/offset) or a trailing window (days=N) for
+    charting. The window form returns observations in chronological order."""
+    if days is not None:
+        if days <= 0 or days > 366:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "invalid_days",
+                        "message": "days must be between 1 and 366"})
+    else:
+        limit = max(1, min(int(limit), 100))
+        offset = max(0, int(offset))
     with db.session_scope() as conn:
         plot = db.get_plot(conn, plot_id)
         if plot is None:
             raise HTTPException(status_code=404,
                                 detail={"code": "plot_not_found",
                                         "message": "plot not found"})
+        if days is not None:
+            cutoff = (datetime.now(timezone.utc)
+                      - timedelta(days=days)).isoformat()
+            total = conn.execute(
+                "SELECT COUNT(*) AS n FROM water_observations"
+                " WHERE plot_id = ? AND observed_at >= ?",
+                (plot_id, cutoff)).fetchone()["n"]
+            obs = [
+                {"id": int(o["id"]), "level_cm": float(o["level_cm"]),
+                 "source": o["source"], "kind": _data_kind(o["source"]),
+                 "raw_distance": (float(o["raw_distance"])
+                                  if o["raw_distance"] is not None else None),
+                 "observed_at": o["observed_at"],
+                 "received_at": o["received_at"],
+                 "quality_state": o["quality_state"], "demo": bool(o["demo"])}
+                for o in conn.execute(
+                    "SELECT * FROM water_observations WHERE plot_id = ?"
+                    " AND observed_at >= ? ORDER BY observed_at ASC, id ASC"
+                    " LIMIT 5000", (plot_id, cutoff)).fetchall()]
+            recs = [
+                {"id": int(r["id"]), "action": r["action"],
+                 "reason_codes": json.loads(r["reason_codes"]),
+                 "ruleset_version": r["ruleset_version"],
+                 "created_at": r["created_at"],
+                 "superseded_at": r["superseded_at"],
+                 "needs_review": bool(r["needs_review"])}
+                for r in conn.execute(
+                    "SELECT * FROM recommendations WHERE plot_id = ?"
+                    " AND created_at >= ? ORDER BY created_at ASC, id ASC"
+                    " LIMIT 5000", (plot_id, cutoff)).fetchall()]
+            return {"plot_id": plot_id, "observations": obs,
+                    "recommendations": recs, "total": int(total)}
         total = conn.execute(
             "SELECT COUNT(*) AS n FROM water_observations WHERE plot_id = ?",
             (plot_id,)).fetchone()["n"]
         obs = [
             {"id": int(o["id"]), "level_cm": float(o["level_cm"]),
              "source": o["source"], "kind": _data_kind(o["source"]),
+             "raw_distance": (float(o["raw_distance"])
+                              if o["raw_distance"] is not None else None),
              "observed_at": o["observed_at"],
              "received_at": o["received_at"],
              "quality_state": o["quality_state"], "demo": bool(o["demo"])}

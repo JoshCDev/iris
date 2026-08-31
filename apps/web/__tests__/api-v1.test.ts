@@ -1,4 +1,4 @@
-// apps/web/__tests__/api-v1.test.ts
+﻿// apps/web/__tests__/api-v1.test.ts
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   getV1Today,
@@ -10,7 +10,7 @@ import {
 const todayFixture: TodayPayload = {
   plot: { id: 4, name: "Petak Utara", is_demo: false },
   freshness: { state: "current", last_observed_at: "2026-08-30T07:15:00+07:00" },
-  water: { level_cm: -15.2, source: "manual", stage: "veg_awd" },
+  water: { level_cm: -15.2, source: "manual", stage: "veg_awd", stage_days: 30 },
   weather: { source: "BMKG", adm4: null, availability: "fresh", rain72_mm: 6.5,
              fetched_at: "2026-08-30T07:00:00+07:00", window_end: "2026-09-02T07:00:00+07:00",
              stale_since: null, secondary_review: { needs_review: false } },

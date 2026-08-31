@@ -18,6 +18,7 @@ Contract:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -32,6 +33,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import db
 from app.config import get_settings
 from app.db import session_scope
+from app.db_l1 import (
+    insert_leaf_assessment,
+    insert_recommendation,
+    insert_water_observation,
+    insert_weather_snapshot_row,
+    supersede_older_recommendations,
+)
 from app.irrigation.bmkg_areas import ensure_bmkg_areas
 from app.irrigation.protocol import stage_on
 from app.irrigation.scheduler import REFILL_CM, decide
@@ -277,6 +285,129 @@ def _seed_vision_reports(conn, plot_id: int) -> int:
     return inserted
 
 
+def _seed_v1_records(conn, plot_id: int, series: list[dict[str, Any]]) -> dict[str, int]:
+    """Mirror the demo series into the L1 (v1) tables at FULL cadence.
+
+    Every simulated reading becomes a `water_observations` row with a
+    matching `weather_snapshots` row and an immutable `recommendations`
+    row — the same records Today/Water/Records/Assistant read — so the
+    chart history is dense and every page shows the same records without
+    a manual entry first. A final observation is anchored at seed time so
+    the plot reads as current, and all older recommendations are marked
+    superseded (only the latest stays pending).
+    """
+    n_obs = n_snap = n_rec = 0
+    last_rec_id: int | None = None
+    for s in series:
+        obs_id = insert_water_observation(
+            conn, plot_id=plot_id, source="sensor",
+            level_cm=s["level_cm"], raw_distance=s["dist_cm"],
+            observed_at=s["ts"], received_at=s["ts"],
+            quality_state="ok", demo=True)
+        n_obs += 1
+        snap_id = insert_weather_snapshot_row(
+            conn, plot_id=plot_id, source="BMKG", adm4="33.73.01.1003",
+            fetched_at=s["ts"],
+            window_end=(datetime.fromisoformat(s["ts"])
+                        + timedelta(hours=72)).isoformat(),
+            rain72_mm=s["rain72_mm"], availability="fresh", demo=True)
+        n_snap += 1
+        last_rec_id = insert_recommendation(
+            conn, plot_id=plot_id, observation_id=obs_id,
+            weather_snapshot_id=snap_id, stage=s["stage"],
+            action=s["action"], reason_codes=json.dumps([s["reason_id"]]),
+            ruleset_version="safe-awd-v1", created_at=s["ts"],
+            needs_review=False, demo=True)
+        n_rec += 1
+
+    # Anchor the plot at seed time: one current observation + snapshot +
+    # recommendation carrying the series' last level, so Today/Water read
+    # as fresh instead of ending yesterday.
+    now = datetime.now(timezone.utc).isoformat()
+    last_level = series[-1]["level_cm"]
+    days = max(0, (datetime.now(WIB).date()
+                   - date.fromisoformat(_transplant_date().isoformat())).days)
+    stage = stage_on(days)
+    dec = decide(last_level, stage, 0.0)
+    obs_id = insert_water_observation(
+        conn, plot_id=plot_id, source="sensor", level_cm=last_level,
+        raw_distance=round(PIPE_ZERO_CM - last_level, 3), observed_at=now,
+        received_at=now, quality_state="ok", demo=True)
+    n_obs += 1
+    snap_id = insert_weather_snapshot_row(
+        conn, plot_id=plot_id, source="BMKG", adm4="33.73.01.1003",
+        fetched_at=now,
+        window_end=(datetime.fromisoformat(now)
+                    + timedelta(hours=72)).isoformat(),
+        rain72_mm=0.0, availability="fresh", demo=True)
+    n_snap += 1
+    last_rec_id = insert_recommendation(
+        conn, plot_id=plot_id, observation_id=obs_id,
+        weather_snapshot_id=snap_id, stage=stage.value, action=dec.action,
+        reason_codes=json.dumps([dec.reason_id]),
+        ruleset_version="safe-awd-v1", created_at=now,
+        needs_review=False, demo=True)
+    n_rec += 1
+
+    # Older recommendations are superseded by the latest (same semantics as
+    # the live POST route), so Records shows one current + the rest history.
+    supersede_older_recommendations(
+        conn, plot_id, keep_id=last_rec_id, superseded_at=now)
+    return {"observations": n_obs, "weather_snapshots": n_snap,
+            "recommendations": n_rec}
+
+
+def _seed_leaf_assessments(conn, plot_id: int) -> int:
+    """Run the REAL triage pipeline on two bundled sample images and store
+    the results as demo `leaf_assessments` rows (is_demo=1) — the v1 leaf
+    records Today reads."""
+    pack_dir = Path(__file__).resolve().parents[1] / "crop_packs" / "rice"
+    samples = ["rice-blast-demo.jpg", "rice-blast-demo.webp"]
+    if not (pack_dir / "model.onnx").exists():
+        return 0
+    services = _vision_services()
+    if services is None:
+        return 0
+    packs, inference, guard, advisory = services
+
+    inserted = 0
+    for n, name in enumerate(samples):
+        path = pack_dir / name
+        if not path.exists():
+            continue
+        image_bytes = path.read_bytes()
+        try:
+            quality = guard.analyze(image_bytes)
+            result = inference.predict(
+                RICE_SLUG, image_bytes, file_name=name,
+                quality_metrics=quality.metrics)
+        except Exception:
+            continue
+        predicted = result.predicted
+        disease_class = packs.get_class_by_slug(RICE_SLUG,
+                                                predicted.class_slug)
+        risk_rule = packs.risk_rule_for(RICE_SLUG, predicted.class_slug)
+        _score, severity_lbl, _review = calculate_severity(
+            class_slug=predicted.class_slug,
+            confidence=predicted.confidence,
+            risk_weight=float(disease_class["risk_weight"]),
+            recent_same_area_count=0,
+            default_expert_review=bool(risk_rule.get("default_expert_review",
+                                                     False)),
+        )
+        created = (datetime.now(timezone.utc)
+                   - timedelta(minutes=15 * n)).isoformat()
+        insert_leaf_assessment(
+            conn, plot_id=plot_id,
+            image_hash=hashlib.sha256(image_bytes).hexdigest(),
+            retention_mode="operational", model_version=result.model_version,
+            guard_result="ok", class_=predicted.class_slug,
+            confidence=float(predicted.confidence), severity=severity_lbl,
+            evidence_type="public-dataset", created_at=created, demo=True)
+        inserted += 1
+    return inserted
+
+
 def seed_demo(db_url: str | None = None) -> dict[str, Any]:
     series = _build_series()
     database = db.init_db(db_url) if db_url else db.get_db()
@@ -309,6 +440,8 @@ def seed_demo(db_url: str | None = None) -> dict[str, Any]:
             "SELECT COUNT(*) AS n FROM decisions WHERE plot_id = ?"
             " AND action = 'HOLD_FOR_RAIN'", (plot_id,)).fetchone()["n"]
         vision_reports = _seed_vision_reports(conn, plot_id)
+        v1 = _seed_v1_records(conn, plot_id, series)
+        leaf_assessments = _seed_leaf_assessments(conn, plot_id)
     return {
         "plot_id": plot_id,
         "name": PLOT_NAME,
@@ -317,6 +450,8 @@ def seed_demo(db_url: str | None = None) -> dict[str, Any]:
         "irrigations": n_irr,
         "hold_for_rain": int(holds),
         "vision_reports": vision_reports,
+        "v1": v1,
+        "leaf_assessments": leaf_assessments,
         "replaced_plots": replaced,
         "bmkg_areas": n_areas,
         "is_demo": True,

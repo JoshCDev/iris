@@ -25,7 +25,7 @@ async def post_leaf_assessment(
     image: UploadFile = File(...),
 ):
     from app.main import (
-        RICE_SLUG, _ensure_vision_loaded, crop_packs,
+        RICE_SLUG, _ensure_vision_loaded, advisory_service, crop_packs,
         image_guard, inference_service,
     )
     from app.vision.inference import LowConfidenceRejection
@@ -72,6 +72,9 @@ async def post_leaf_assessment(
         risk_weight=float(disease_class["risk_weight"]),
         recent_same_area_count=0,
         default_expert_review=False)
+    advisories = advisory_service.build_bilingual(RICE_SLUG,
+                                                  predicted.class_slug)
+    fusion_payload = _plot_fusion(plot_id, predicted.class_slug)
     assessment_id = _store(
         plot_id, image_bytes, "ok", predicted.class_slug,
         float(predicted.confidence), severity_lbl,
@@ -85,7 +88,36 @@ async def post_leaf_assessment(
         "evidence_type": "public-dataset",
         "model_version": result.model_version,
         "disclaimer": "Screening, not a diagnosis. Confirm with an extension officer.",
+        "advisory_id": advisories["id"]["summary"],
+        "advisory_en": advisories["en"]["summary"],
+        "fusion": fusion_payload,
+        "is_demo": bool(plot["is_demo"]),
     }
+
+
+def _plot_fusion(plot_id: int, class_slug: str) -> dict | None:
+    """Combined plot concern (disease × AWD state × wet weather) from the
+    latest v1 water observation + weather snapshot — the same unified
+    records every other page reads."""
+    from app.fusion.risk import assess, awd_state_from, wet_weather_from_rain
+    from app.main import _VISION_DISEASE_CLASSES
+    from app.weather.snapshots import latest_weather_snapshot
+
+    with db.session_scope() as conn:
+        obs = conn.execute(
+            "SELECT level_cm FROM water_observations WHERE plot_id = ?"
+            " ORDER BY id DESC LIMIT 1", (plot_id,)).fetchone()
+        snap = latest_weather_snapshot(conn, plot_id)
+        rec = conn.execute(
+            "SELECT stage FROM recommendations WHERE plot_id = ?"
+            " ORDER BY id DESC LIMIT 1", (plot_id,)).fetchone()
+    if obs is None or rec is None:
+        return None
+    rain72 = (float(snap.rain72_mm)
+              if snap is not None and snap.rain72_mm is not None else 0.0)
+    disease = class_slug if class_slug in _VISION_DISEASE_CLASSES else "none"
+    awd_state = awd_state_from(float(obs["level_cm"]), rec["stage"])
+    return assess(disease, awd_state, wet_weather_from_rain(rain72))
 
 
 @router.get("/{plot_id}/leaf-assessments")

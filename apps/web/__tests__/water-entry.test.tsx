@@ -1,4 +1,4 @@
-// apps/web/__tests__/water-entry.test.tsx
+﻿// apps/web/__tests__/water-entry.test.tsx
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
@@ -17,7 +17,7 @@ describe("WaterEntryForm", () => {
     vi.spyOn(v1, "postV1WaterObservation").mockResolvedValue({
       plot: { id: 4, name: "Petak Utara", is_demo: false },
       freshness: { state: "current", last_observed_at: null },
-      water: { level_cm: -5, source: "manual", stage: "veg_awd" },
+      water: { level_cm: -5, source: "manual", stage: "veg_awd", stage_days: 30 },
       weather: { source: "BMKG", adm4: null, availability: "fresh", rain72_mm: 0,
                  fetched_at: null, window_end: null, stale_since: null,
                  secondary_review: { needs_review: false } },

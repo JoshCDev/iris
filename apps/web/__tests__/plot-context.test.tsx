@@ -25,7 +25,7 @@ describe("PlotProvider", () => {
     vi.spyOn(v1, "getV1Today").mockResolvedValue({
       plot: { id: 7, name: "Petak Utara", is_demo: false },
       freshness: { state: "current", last_observed_at: null },
-      water: { level_cm: -5, source: "manual", stage: "veg_awd" },
+      water: { level_cm: -5, source: "manual", stage: "veg_awd", stage_days: 30 },
       weather: { source: "BMKG", adm4: null, availability: "fresh",
                  rain72_mm: 0, fetched_at: null, window_end: null,
                  stale_since: null, secondary_review: { needs_review: false } },

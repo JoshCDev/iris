@@ -8,32 +8,27 @@ import { Icon } from "@/components/Icon";
 import { LevelChart } from "@/components/LevelChart";
 import { ReceiptCard } from "@/components/ReceiptCard";
 import { StageTimeline } from "@/components/StageTimeline";
-import { latestReport, usePlot } from "@/lib/PlotContext";
+import { usePlot } from "@/lib/PlotContext";
 import {
   ApiError,
-  DEMO_PLOT_ID,
-  DEMO_PLOT_NAME,
-  getHistory,
   getReceipt,
-  getStatus,
-  getWeather,
-  postIngest,
   type GreenReceipt,
-  type PlotHistory,
   type PlotStatus,
-  type WeatherForecast,
 } from "@/lib/api";
-import { postV1WaterObservation } from "@/lib/api/v1";
+import {
+  getV1WaterHistory,
+  postV1WaterObservation,
+  type WaterHistory,
+  type WaterObservationRow,
+} from "@/lib/api/v1";
 import { useLocale } from "@/lib/i18n";
 import {
   actionMeta,
   actionVerb,
-  askLeafHref,
   classLabelId,
   fmtInt,
   fmtNum,
   fmtTs,
-  reasonEn,
   STAGE_META,
 } from "@/lib/format";
 
@@ -87,84 +82,103 @@ export function WaterEntryForm({ plotId, onSaved }: { plotId: number; onSaved: (
   );
 }
 
+/** Map a v1 observation row to the chart's Reading shape. */
+function toReading(o: WaterObservationRow): {
+  ts: string; dist_cm: number; level_cm: number; batt_v: number | null;
+} {
+  return {
+    ts: o.observed_at,
+    dist_cm: o.raw_distance ?? 0,
+    level_cm: o.level_cm,
+    batt_v: null,
+  };
+}
+
 export function WaterClient() {
   const plot = usePlot();
   const { t } = useLocale();
-  const leaf = latestReport(plot.reports);
-  const [status, setStatus] = useState<PlotStatus | null>(null);
-  const [history, setHistory] = useState<PlotHistory | null>(null);
+  const today = plot.today;
+  const [history, setHistory] = useState<WaterHistory | null>(null);
   const [receipt, setReceipt] = useState<GreenReceipt | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
-  const [weather, setWeather] = useState<WeatherForecast | null>(null);
   const [simBusy, setSimBusy] = useState(false);
-  const [simNote, setSimNote] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (plot.activePlotId === null) return;
     try {
-      const [s, h, w] = await Promise.all([
-        getStatus(DEMO_PLOT_ID),
-        getHistory(DEMO_PLOT_ID, 7),
-        getWeather(),
-      ]);
-      setStatus(s);
-      setHistory(h);
-      setWeather(w);
-      setError(null);
-      try {
-        setReceipt(await getReceipt(DEMO_PLOT_ID, 100));
-        setReceiptError(null);
-      } catch (e) {
-        setReceipt(null);
-        setReceiptError(e instanceof ApiError ? e.message : "Receipt not available.");
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load data.");
+      // The v1 water history is the single record set — dense (seeded at
+      // full sensor cadence), so the chart and the status cards agree.
+      setHistory(await getV1WaterHistory(plot.activePlotId, { days: 7 }));
+    } catch {
+      // keep previous rows; the plot context refresh covers errors
     }
-  }, []);
+    try {
+      setReceipt(await getReceipt(plot.activePlotId, 100));
+      setReceiptError(null);
+    } catch (e) {
+      setReceipt(null);
+      setReceiptError(e instanceof ApiError ? e.message : "Receipt not available.");
+    }
+  }, [plot.activePlotId]);
 
   useEffect(() => {
     refresh();
-    const t = setInterval(refresh, 60_000);
-    return () => clearInterval(t);
+    const timer = setInterval(refresh, 60_000);
+    return () => clearInterval(timer);
   }, [refresh]);
 
-  // Demo simulation: plausible sawtooth drawdown/refill distance.
-  // pipe_zero = 30 cm → level −15…+5 cm ⇔ dist_cm 25…45 m.
+  const onSaved = useCallback(() => {
+    refresh();
+    plot.refresh();
+  }, [refresh, plot.refresh]);
+
+  // Demo simulation: post a plausible sensor reading through the same v1
+  // path so it lands in the shared water_observations/recommendations records.
   const simulateReading = async () => {
+    if (plot.activePlotId === null) return;
     setSimBusy(true);
-    setSimNote(null);
     try {
-      const distCm = Math.round((26 + Math.random() * 18) * 10) / 10;
-      const battV = Math.round((3.85 + Math.random() * 0.2) * 100) / 100;
-      await postIngest({ device_plot_name: DEMO_PLOT_NAME, dist_cm: distCm, batt_v: battV });
-      setSimNote(
-        `Simulated reading logged (distance ${fmtNum(distCm)} cm, battery ${fmtNum(battV, 2)} V). Processed by the same scheduler as a field sensor.`,
-      );
-      await refresh();
-      plot.refresh();
-    } catch (e) {
-      setSimNote(e instanceof Error ? `Failed: ${e.message}` : "Simulation failed.");
+      const levelCm = Math.round((5 - Math.random() * 20) * 10) / 10; // +5 … −15 cm
+      await postV1WaterObservation(plot.activePlotId, {
+        level_cm: levelCm,
+        source: "sensor",
+      });
+      await onSaved();
+    } catch {
+      // non-fatal; the button remains usable
     } finally {
       setSimBusy(false);
     }
   };
 
-  if (error) {
-    return (
-      <div className="callout callout--danger">
-        <strong>Cannot reach the data server.</strong> Try again shortly.
-      </div>
-    );
-  }
+  const water = today?.water;
+  const rec = today?.recommendation;
+  const weather = today?.weather;
+  const readings = history?.observations ?? [];
+  const stageDays = water?.stage_days ?? 0;
+  const timelineStatus: PlotStatus | null = water
+    ? {
+        stage: water.stage,
+        stage_days: stageDays,
+        plot_id: today?.plot.id ?? 0,
+        name: today?.plot.name ?? "",
+        level_cm: water.level_cm,
+        action: rec?.action ?? null,
+        reason_id: null,
+        rain72_mm: weather?.rain72_mm ?? null,
+        next_check: null,
+        last_ts: today?.freshness.last_observed_at ?? null,
+        is_demo: today?.plot.is_demo ?? false,
+      }
+    : null;
 
   return (
     <div className="grid">
       <CrossLinks current="water" />
-      {status?.is_demo && (
+      {today?.plot.is_demo && (
         <div className="demo-banner">
           <DemoBadge />
-          <span>Figures on this page are from the built-in demo plot “{status.name}”, not a production field.</span>
+          <span>Figures on this page are from the built-in demo plot “{today.plot.name}”, not a production field.</span>
         </div>
       )}
 
@@ -174,13 +188,7 @@ export function WaterClient() {
           <p className="muted">{t("common.loading")}</p>
         </div>
       ) : (
-        <WaterEntryForm
-          plotId={plot.activePlotId}
-          onSaved={() => {
-            refresh();
-            plot.refresh();
-          }}
-        />
+        <WaterEntryForm plotId={plot.activePlotId} onSaved={onSaved} />
       )}
 
       {/* Next action + rain strip */}
@@ -190,15 +198,17 @@ export function WaterClient() {
           <p className="small muted" style={{ margin: 0 }}>
             Human in the loop. Recommendation only.
           </p>
-          {status ? (
+          {rec ? (
             <>
-              <div className={`next-action__verb next-action__verb--${actionMeta(status.action).tone}`}>
-                {actionVerb(status.action)}
+              <div className={`next-action__verb next-action__verb--${actionMeta(rec.action).tone}`}>
+                {actionVerb(rec.action)}
               </div>
-              <p style={{ margin: 0, lineHeight: 1.6 }}>{reasonEn(status.reason_id)}</p>
+              <p style={{ margin: 0, lineHeight: 1.6 }}>{rec.reason_codes[0] ?? rec.action}</p>
               <div className="small muted">
-                Stage: {STAGE_META[status.stage]?.label ?? status.stage} · d {status.stage_days} · next check {fmtTs(status.next_check)}
-                {status.last_ts ? ` · last reading ${fmtTs(status.last_ts)}` : ""}
+                Stage: {STAGE_META[water?.stage ?? ""]?.label ?? water?.stage ?? "n/a"} · d{" "}
+                {stageDays} · water {fmtNum(water?.level_cm ?? null)} cm · observed{" "}
+                {fmtTs(today?.freshness.last_observed_at)}
+                {rec.confirmation_state === "confirmed" ? " · confirmed" : " · pending confirmation"}
               </div>
             </>
           ) : (
@@ -222,11 +232,10 @@ export function WaterClient() {
             <div className="small muted" style={{ marginTop: 8 }}>
               Test readings go through the same decision engine as a field sensor.
             </div>
-            {simNote && <div className="callout" style={{ marginTop: 10 }}>{simNote}</div>}
-            {leaf && (
+            {today?.latest_leaf && (
               <p className="small" style={{ margin: "8px 0 0" }}>
-                Last leaf on this plot: {classLabelId(leaf.top_class)}.{" "}
-                <Link href={askLeafHref(leaf.top_class)}>Ask what it means for water →</Link>
+                Last leaf on this plot: {classLabelId(today.latest_leaf.class ?? "none")}.{" "}
+                <Link href="/health">Check the leaf →</Link>
               </p>
             )}
           </div>
@@ -235,36 +244,35 @@ export function WaterClient() {
         <div style={{ display: "grid", gap: 14, alignContent: "start" }}>
           <div className="rain-strip">
             <Icon name="cloud-rain" size={24} aria-hidden="true" />
-            <strong>{fmtNum(status?.rain72_mm ?? weather?.rain72_mm)} mm</strong>
+            <strong>
+              {weather?.rain72_mm === null || weather?.rain72_mm === undefined
+                ? "n/a"
+                : `${fmtNum(weather.rain72_mm)} mm`}
+            </strong>
             <span>72-hour rain total · BMKG · supporting only</span>
             {weather && (
-              <span className={`status-pill${weather.stale ? " status-pill--alert" : ""}`}>
-                {weather.stale ? "using stored forecast" : "fresh forecast"}
+              <span className={`status-pill${weather.availability !== "fresh" ? " status-pill--alert" : ""}`}>
+                {weather.availability === "fresh"
+                  ? "fresh forecast"
+                  : weather.availability === "stale-cache"
+                    ? "using stored forecast"
+                    : "forecast unavailable"}
               </span>
             )}
           </div>
-          {weather?.hitl && (
-            <p className="small muted" style={{ margin: 0, lineHeight: 1.5 }}>
-              Persistence LogReg second opinion: P(wet){" "}
-              {fmtNum(weather.hitl.logreg_p_wet * 100)}%
-              {weather.hitl.logreg_wet ? " (wet)" : " (dry)"}. Scheduler still
-              uses BMKG only.
-            </p>
-          )}
-          {weather?.hitl?.needs_review && (
+          {weather?.secondary_review?.needs_review && (
             <div className="callout callout--warning">
-              <strong>Human review (rain).</strong> {weather.hitl.note}{" "}
-              Persistence LogReg P(wet) {fmtNum(weather.hitl.logreg_p_wet * 100)}%.
-              BMKG does not skip irrigation by itself if the pipe is already dry.
+              <strong>Human review (rain).</strong> The rain forecast needs a
+              second look — check local conditions before relying on it.
             </div>
           )}
           <div className="card">
             <h3>Growth-stage timeline</h3>
             <p className="small muted" style={{ marginTop: 8 }}>
-              Day {status?.stage_days ?? "n/a"} after transplant →{" "}
-              {status ? STAGE_META[status.stage]?.label ?? status.stage : "…"}
+              Day {stageDays} after transplant →{" "}
+              {STAGE_META[water?.stage ?? ""]?.label ?? water?.stage ?? "…"}
             </p>
-            {status && <StageTimeline status={status} />}
+            {timelineStatus && <StageTimeline status={timelineStatus} />}
           </div>
         </div>
       </div>
@@ -274,13 +282,10 @@ export function WaterClient() {
         <div className="section-heading" style={{ marginBottom: 12 }}>
           <h3>7-day water-level trace</h3>
           <span className="small muted">
-            {history ? `${fmtInt(history.readings.length)} readings` : ""}
+            {readings.length > 0 ? `${fmtInt(readings.length)} readings` : ""}
           </span>
         </div>
-        <LevelChart
-          readings={history?.readings ?? []}
-          dataKind={plot.today?.water.kind ?? null}
-        />
+        <LevelChart readings={readings.map(toReading)} dataKind={water?.kind ?? null} />
       </div>
 
       {/* Receipt */}

@@ -1,4 +1,7 @@
+import json
 from datetime import datetime, timedelta, timezone
+
+import pytest
 
 from app import db
 from app.db_l1 import (
@@ -172,14 +175,65 @@ def test_reseed_cleans_l1_rows(tmp_path):
             model_version="rice-v1", guard_result="ok", class_="blast",
             confidence=0.92, severity="medium",
             created_at="2026-08-30T08:00:00+07:00")
-    # Re-seed must succeed (the reported failure) and leave L1 tables empty.
+    # Re-seed must succeed (the reported failure), clear the manually
+    # inserted L1 rows, and repopulate the seeder's own v1 records at full
+    # cadence (one observation/snapshot/recommendation per reading step).
     summary = seed_demo(url)
     assert summary["replaced_plots"] == 1
     with db.session_scope(db.Database(url)) as conn:
-        for table in ("water_observations", "recommendations",
-                      "action_confirmations", "weather_snapshots",
-                      "leaf_assessments"):
-            assert db.count_rows(conn, table) == 0
+        # Manual rows (confirmation + leaf assessment) are gone; the seeder
+        # re-created its own leaf assessments.
+        assert db.count_rows(conn, "action_confirmations") == 0
+        assert db.count_rows(conn, "leaf_assessments") == 2
+        # The v1 mirror exists at full cadence (one per simulated reading,
+        # plus the current seed-time observation/snapshot/recommendation).
+        assert db.count_rows(conn, "water_observations") == TOTAL_STEPS + 1
+        assert db.count_rows(conn, "recommendations") == TOTAL_STEPS + 1
+        assert db.count_rows(conn, "weather_snapshots") == TOTAL_STEPS + 1
+
+
+def test_seed_v1_records_consistent_with_legacy(tmp_path):
+    """The v1 mirror must tell the SAME story as the legacy tables: the
+    latest v1 recommendation matches the latest legacy decision, only the
+    latest recommendation is current (rest superseded), and every row is
+    demo-marked."""
+    url = f"sqlite:///{(tmp_path / 'v1c.db').as_posix()}"
+    seed_demo(url)
+    with db.session_scope(db.Database(url)) as conn:
+        pid = conn.execute(
+            "SELECT id FROM plots WHERE is_demo = 1").fetchone()["id"]
+        latest_legacy = conn.execute(
+            "SELECT action, reason_id, level_cm, ts FROM decisions"
+            " WHERE plot_id = ? ORDER BY ts DESC, id DESC LIMIT 1",
+            (pid,)).fetchone()
+        latest_rec = conn.execute(
+            "SELECT action, reason_codes, created_at, superseded_at, demo"
+            " FROM recommendations WHERE plot_id = ?"
+            " ORDER BY id DESC LIMIT 1", (pid,)).fetchone()
+        assert latest_rec is not None
+        assert latest_rec["action"] == latest_legacy["action"]
+        assert json.loads(latest_rec["reason_codes"]) == [latest_legacy["reason_id"]]
+        assert latest_rec["superseded_at"] is None
+        assert latest_rec["demo"] == 1
+        # Exactly one current recommendation; the rest carry superseded_at.
+        current = conn.execute(
+            "SELECT COUNT(*) AS n FROM recommendations WHERE plot_id = ?"
+            " AND superseded_at IS NULL", (pid,)).fetchone()["n"]
+        superseded = conn.execute(
+            "SELECT COUNT(*) AS n FROM recommendations WHERE plot_id = ?"
+            " AND superseded_at IS NOT NULL", (pid,)).fetchone()["n"]
+        assert current == 1
+        assert superseded == TOTAL_STEPS
+        # The latest v1 observation matches the latest legacy reading level.
+        latest_obs = conn.execute(
+            "SELECT level_cm, demo FROM water_observations WHERE plot_id = ?"
+            " ORDER BY id DESC LIMIT 1", (pid,)).fetchone()
+        latest_reading = conn.execute(
+            "SELECT level_cm FROM readings WHERE plot_id = ?"
+            " ORDER BY ts DESC, id DESC LIMIT 1", (pid,)).fetchone()
+        assert latest_obs["level_cm"] == pytest.approx(
+            float(latest_reading["level_cm"]))
+        assert latest_obs["demo"] == 1
 
 
 def test_seed_engine_paths_real_decisions(tmp_path):

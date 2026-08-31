@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+﻿import { useEffect, type ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { RecommendationCard } from "@/components/RecommendationCard";
@@ -9,7 +9,7 @@ import type { TodayPayload } from "@/lib/api/v1";
 const today: TodayPayload = {
   plot: { id: 4, name: "Petak Utara", is_demo: false },
   freshness: { state: "current", last_observed_at: "2026-08-30T07:15:00+07:00" },
-  water: { level_cm: -15.2, source: "manual", stage: "veg_awd" },
+  water: { level_cm: -15.2, source: "manual", stage: "veg_awd", stage_days: 30 },
   weather: { source: "BMKG", adm4: null, availability: "fresh", rain72_mm: 6.5,
              fetched_at: "2026-08-30T07:00:00+07:00", window_end: null,
              stale_since: null, secondary_review: { needs_review: false } },
