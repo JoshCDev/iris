@@ -20,7 +20,7 @@ export function CrossLinks({ current }: { current: "water" | "health" | "assista
       )}
       {current !== "assistant" && (
         <Link href={current === "health" ? askLeafHref(leaf?.top_class) : askWhyHref(status?.action)}>
-          Ask the assistant about this plot
+          Ask IRIS about this plot
         </Link>
       )}
     </nav>
