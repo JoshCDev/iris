@@ -3,15 +3,10 @@
 import { useCallback, useRef, useState } from "react";
 import { CrossLinks } from "@/components/CrossLinks";
 import { DemoBadge } from "@/components/DemoBadge";
-import { FusionBanner } from "@/components/FusionBanner";
 import { SeverityGauge } from "@/components/SeverityGauge";
 import { usePlot } from "@/lib/PlotContext";
-import {
-  ApiError,
-  DEMO_PLOT_ID,
-  postVisionPredict,
-  type VisionPrediction,
-} from "@/lib/api";
+import { ApiError } from "@/lib/api";
+import { postV1LeafAssessment, type LeafAssessment } from "@/lib/api/v1";
 import { classLabelId, fmtNum } from "@/lib/format";
 
 interface Rejection {
@@ -30,11 +25,11 @@ function friendlyRejection(rej: Rejection): string {
 }
 
 export function HealthClient() {
-  const { refresh: refreshPlot } = usePlot();
+  const { refresh: refreshPlot, activePlotId } = usePlot();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<VisionPrediction | null>(null);
+  const [result, setResult] = useState<LeafAssessment | null>(null);
   const [rejection, setRejection] = useState<Rejection | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -57,11 +52,12 @@ export function HealthClient() {
 
   const runPredict = useCallback(
     async (target: File) => {
+      if (activePlotId === null) return;
       setBusy(true);
       setRejection(null);
       setError(null);
       try {
-        const pred = await postVisionPredict({ file: target, plotId: DEMO_PLOT_ID, language: "en" });
+        const pred = await postV1LeafAssessment(activePlotId, target);
         setResult(pred);
         refreshPlot();
       } catch (e) {
@@ -75,7 +71,7 @@ export function HealthClient() {
         setBusy(false);
       }
     },
-    [refreshPlot],
+    [activePlotId, refreshPlot],
   );
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -174,43 +170,44 @@ export function HealthClient() {
           <div className="card card--strong" style={{ display: "grid", gap: 14 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
               <h3 style={{ fontSize: "1.45rem" }}>
-                {result.class_label_en}
+                {result.class_label_en ?? classLabelId(result.class ?? "none")}
               </h3>
               <span style={{ display: "inline-flex", gap: 8 }}>
-                {result.is_demo && <DemoBadge small />}
+                {result.demo && <DemoBadge small />}
               </span>
             </div>
 
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, marginBottom: 6 }}>
-                <span>Model confidence</span>
-                <span>{fmtNum(result.confidence * 100)}%</span>
+            {result.confidence !== null && (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, marginBottom: 6 }}>
+                  <span>Model confidence</span>
+                  <span>{fmtNum(result.confidence * 100)}%</span>
+                </div>
+                <div className="bar">
+                  <span style={{ width: `${Math.round(result.confidence * 100)}%` }} />
+                </div>
               </div>
-              <div className="bar">
-                <span style={{ width: `${Math.round(result.confidence * 100)}%` }} />
-              </div>
-            </div>
+            )}
 
             <div className="grid grid--2" style={{ alignItems: "center" }}>
-              <SeverityGauge label={result.severity} />
+              <SeverityGauge label={result.severity ?? "n/a"} />
               <div>
-                <span className="eyebrow">Advisory</span>
+                <span className="eyebrow">Screening result</span>
                 <p style={{ margin: 0, lineHeight: 1.65 }}>
-                  {result.advisory_en}
+                  {result.class_label_en ?? classLabelId(result.class ?? "none")}
                 </p>
-                <div className="small muted mono" style={{ marginTop: 8 }}>{result.top_class}</div>
+                <div className="small muted mono" style={{ marginTop: 8 }}>{result.class}</div>
               </div>
             </div>
 
-            {result.fusion && <FusionBanner fusion={result.fusion} />}
-
             <div className="small muted">
-              Screening, not a diagnosis. Confirm with an extension officer.
+              {result.disclaimer ??
+                "Screening, not a diagnosis. Confirm with an extension officer."}
             </div>
           </div>
         ) : (
           <div className="sub-panel muted">
-            No result yet. Upload a photograph. Triage, severity, and fusion appear here.
+            No result yet. Upload a photograph. Triage and severity appear here.
           </div>
         )}
       </div>
