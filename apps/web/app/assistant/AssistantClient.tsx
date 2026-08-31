@@ -1,13 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { TracePanel } from "@/components/ToolTraceChip";
-import { latestReport, usePlot } from "@/lib/PlotContext";
 import { postChat, type ChatMessage, type ToolHop } from "@/lib/api";
-import { actionVerb, askLeafQuestion, askWhyQuestion, classLabelId, fmtLevel } from "@/lib/format";
 
 function displayReply(raw: string): string {
   return raw
@@ -51,8 +48,6 @@ interface DisplayMessage {
 
 export function AssistantClient() {
   const searchParams = useSearchParams();
-  const plot = usePlot();
-  const leaf = latestReport(plot.reports);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -177,58 +172,58 @@ export function AssistantClient() {
   };
 
   const suggested = useMemo(() => {
-    const items = [askWhyQuestion(plot.status?.action)];
-    items.push(askLeafQuestion(leaf?.top_class));
-    items.push("Why does methane drop?");
-    return items;
-  }, [plot.status?.action, leaf?.top_class]);
+    return [
+      "Why is irrigation on hold?",
+      "What does the latest leaf status mean?",
+      "Why does methane drop?",
+    ];
+  }, []);
 
   return (
     <div className="chat-shell">
-      <div className="assistant-context">
-        {plot.status ? (
-          <>
-            <strong>{plot.status.name}</strong>
-            <span>
-              {actionVerb(plot.status.action)} · water {fmtLevel(plot.status.level_cm)}
-            </span>
-            <span>Leaf: {leaf ? classLabelId(leaf.top_class) : "no photo yet"}</span>
-            <Link href="/water">Open water</Link>
-            <Link href="/health">Open leaf</Link>
-          </>
-        ) : (
-          <span>Loading plot record…</span>
-        )}
-      </div>
       <div className="chat-scroll" role="log" aria-live="polite" aria-busy={busy} ref={scrollRef}>
           {messages.length === 0 && (
-            <p className="muted">
-              Start from this plot's water action or leaf, or attach a photograph.
-            </p>
+            <div className="chat-welcome">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/mascot.png" alt="" className="chat-mascot" />
+              <p className="muted">
+                Hi! I&apos;m IRIS — ask me about this plot&apos;s water, leaf, or weather.
+              </p>
+            </div>
           )}
           {messages.map((m, i) => (
             <div key={i} className={`chat-msg chat-msg--${m.role}`}>
-              {m.imagePreviewUrl && (
+              {m.role === "assistant" && (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img className="chat-msg__thumb" src={m.imagePreviewUrl} alt="Attached photo" />
+                <img src="/mascot.png" alt="" className="chat-mascot chat-mascot--avatar" />
               )}
-              <div className="chat-msg__bubble"><BubbleText text={m.content} /></div>
-              {m.role === "assistant" && ((m.toolTrace && m.toolTrace.length > 0) || m.mode) && (
-                <div className="chat-msg__meta">
-                  {m.toolTrace && m.toolTrace.length > 0 && <TracePanel hops={m.toolTrace} />}
-                  {m.mode === "offline" && (
-                    <span className="mode-badge">
-                      <Icon name="alert-triangle" size={20} /> offline mode
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="chat-msg__body">
+                {m.imagePreviewUrl && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img className="chat-msg__thumb" src={m.imagePreviewUrl} alt="Attached photo" />
+                )}
+                <div className="chat-msg__bubble"><BubbleText text={m.content} /></div>
+                {m.role === "assistant" && ((m.toolTrace && m.toolTrace.length > 0) || m.mode) && (
+                  <div className="chat-msg__meta">
+                    {m.toolTrace && m.toolTrace.length > 0 && <TracePanel hops={m.toolTrace} />}
+                    {m.mode === "offline" && (
+                      <span className="mode-badge">
+                        <Icon name="alert-triangle" size={20} /> offline mode
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
           {busy && (
             <div className="chat-msg chat-msg--assistant">
-              <div className="chat-msg__bubble typing" aria-label="Assistant is typing">
-                <span /><span /><span />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/mascot.png" alt="" className="chat-mascot chat-mascot--avatar" />
+              <div className="chat-msg__body">
+                <div className="chat-msg__bubble typing" aria-label="Assistant is typing">
+                  <span /><span /><span />
+                </div>
               </div>
             </div>
           )}

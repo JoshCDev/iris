@@ -1453,6 +1453,48 @@ video {
 
 .chat-msg--assistant {
   align-self: flex-start;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.chat-msg__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chat-msg--user .chat-msg__body {
+  align-items: flex-end;
+}
+
+.chat-mascot {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.chat-mascot--avatar {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.chat-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 18px 0;
+}
+
+.chat-welcome .chat-mascot {
+  width: 96px;
+  height: 96px;
 }
 
 .chat-msg__bubble {
