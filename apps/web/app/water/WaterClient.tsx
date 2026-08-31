@@ -94,6 +94,17 @@ function toReading(o: WaterObservationRow): {
   };
 }
 
+/** Downsample the 15-minute sensor record to hourly resolution: the last
+ * reading of each hour is the level at that hour mark. */
+function toHourly(rows: WaterObservationRow[]): WaterObservationRow[] {
+  const byHour = new Map<string, WaterObservationRow>();
+  for (const o of rows) {
+    // ISO timestamps sort/bucket correctly by their "YYYY-MM-DDTHH" prefix.
+    byHour.set(o.observed_at.slice(0, 13), o);
+  }
+  return [...byHour.values()];
+}
+
 export function WaterClient() {
   const plot = usePlot();
   const { t } = useLocale();
@@ -154,7 +165,7 @@ export function WaterClient() {
   const water = today?.water;
   const rec = today?.recommendation;
   const weather = today?.weather;
-  const readings = history?.observations ?? [];
+  const chartRows = toHourly(history?.observations ?? []);
   const stageDays = water?.stage_days ?? 0;
   const timelineStatus: PlotStatus | null = water
     ? {
@@ -282,10 +293,10 @@ export function WaterClient() {
         <div className="section-heading" style={{ marginBottom: 12 }}>
           <h3>7-day water-level trace</h3>
           <span className="small muted">
-            {readings.length > 0 ? `${fmtInt(readings.length)} readings` : ""}
+            {chartRows.length > 0 ? `${fmtInt(chartRows.length)} hourly readings` : ""}
           </span>
         </div>
-        <LevelChart readings={readings.map(toReading)} dataKind={water?.kind ?? null} />
+        <LevelChart readings={chartRows.map(toReading)} dataKind={water?.kind ?? null} />
       </div>
 
       {/* Receipt */}
