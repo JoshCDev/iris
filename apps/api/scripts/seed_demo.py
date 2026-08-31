@@ -53,8 +53,17 @@ CADENCE_MIN = 15
 DAYS = 30
 TOTAL_STEPS = DAYS * STEPS_PER_DAY  # 2880
 
-RAIN_EVENT_DAYS = (18, 19)
+RAIN_EVENT_DAYS = (16, 17, 18)
 RAIN72_MM = 22.0
+# Simulated storm intensity per rain-event day, in mm per 15-minute step.
+# Sums to 22 mm over the 3-day event (day 16 light showers ~5 mm, day 17
+# peak ~12 mm, day 18 tail ~5 mm) so RAIN72_MM stays the wet-forecast value
+# the scheduler sees and HOLD_FOR_RAIN still fires on days 16-18.
+STORM_MM_PER_STEP = (0.8, 2.0, 0.8)
+
+# Rain-to-pond efficiency: only a fraction of the fallen rain actually
+# raises the field-tube level (canopy interception, bund overflow, runoff).
+RAIN_RISE_FRACTION = 0.45
 
 VEG_TRIGGER_CM = -15.0
 
@@ -75,30 +84,72 @@ def _diurnal_factor(minute_of_day: float) -> float:
 
 
 def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
-    """Generate readings+engine decisions for the whole window."""
-    rng_level = random.Random(42)
+    """Generate readings+engine decisions for the whole window.
+
+    The trace is deliberately not a clean sawtooth: drainage varies
+    day to day (weather-driven ET), the simulated storm actually lifts
+    the pond, and the sensor adds a little jitter — closer to a real
+    field-tube record than a perfectly even dry-down.
+    """
+    rng_day = random.Random(42)       # day-to-day drainage-rate variation
+    rng_step = random.Random(2024)    # within-day drawdown jitter
+    rng_sensor = random.Random(7)     # sensor noise on the reported level
     rng_batt = random.Random(1337)
     out: list[dict[str, Any]] = []
     level = REFILL_CM
+
+    # Drainage base rate per day (cm per 15-min step), varying ±45% around
+    # 0.10 cm to mimic hotter/drier days vs cooler/cloudier ones.
+    day_rates = [
+        round(0.10 * rng_day.uniform(0.55, 1.45), 4)
+        for _ in range(DAYS)
+    ]
+    # A couple of short "cooler/cloudier" spells where drainage slows for a
+    # day or two (lower ET), then recovers — keeps the dry-down irregular.
+    for spell_start in (9, 23):
+        for d in range(spell_start, min(spell_start + 2, DAYS)):
+            day_rates[d] = round(day_rates[d] * 0.55, 4)
+    # A dry, windy couple of days just before the storm: drainage speeds up so
+    # the pond actually reaches the AWD trigger in time for the rain-hold
+    # logic to fire when the wet forecast arrives (realistic pre-storm dry-down).
+    for d in (15, 16):
+        day_rates[d] = round(day_rates[d] * 2.1, 4)
     for i in range(TOTAL_STEPS):
         day_index = i // STEPS_PER_DAY
         step_in_day = i % STEPS_PER_DAY
         minute_of_day = step_in_day * CADENCE_MIN
         ts = start_ts + timedelta(minutes=CADENCE_MIN * i)
         stage = stage_on(day_index)
-        rain72 = RAIN72_MM if day_index in RAIN_EVENT_DAYS else 0.0
 
         if stage.value == "establishment":
-            # Field kept flooded by continuous inflow; level hugs +5.
+            # Field kept flooded by continuous inflow; level hugs +5 with a
+            # gentle daily cycle plus a little sensor noise.
             wiggle = 0.35 * (0.5 - 0.5 * math.cos(
                 2.0 * math.pi * minute_of_day / 1440.0))
-            level = round(REFILL_CM + 0.05 + wiggle, 3)
+            level = REFILL_CM + 0.05 + wiggle \
+                + rng_sensor.uniform(-0.06, 0.06)
         else:
-            rate = 0.10 * _diurnal_factor(minute_of_day) \
-                * rng_level.uniform(0.85, 1.15)
+            rate = day_rates[day_index] * _diurnal_factor(minute_of_day) \
+                * rng_step.uniform(0.85, 1.15)
             level = level - rate
+            # The simulated storm actually raises the pond: each rain-event
+            # day adds a burst of rainfall through the day that lifts the
+            # field-tube level (a fraction of the rain reaches the pond).
+            if day_index in RAIN_EVENT_DAYS:
+                event_pos = RAIN_EVENT_DAYS.index(day_index)
+                mm = STORM_MM_PER_STEP[event_pos]
+                # Bursts in the afternoon/evening (typical convective rain),
+                # tapering through the day.
+                burst = 1.0 + 1.6 * math.exp(
+                    -((minute_of_day - 960.0) / 240.0) ** 2)
+                level = level + mm * burst * RAIN_RISE_FRACTION / 10.0
+                # Heavy rain can also soften the dry-down that step.
+                level = level + rng_step.uniform(0.0, 0.02)
 
-        dec = decide(level, stage, rain72)
+        # Small sensor noise on the reported reading (sub-cm jitter).
+        reported = level + rng_sensor.uniform(-0.05, 0.05)
+
+        dec = _decide_for(reported, stage, day_index)
 
         irrigation_m3 = None
         if dec.action == "IRRIGATE":
@@ -114,15 +165,25 @@ def _simulate_series(start_ts: datetime) -> list[dict[str, Any]]:
             "ts": ts.isoformat(),
             "day_index": day_index,
             "stage": stage.value,
-            "level_cm": round(level, 3),
-            "dist_cm": round(PIPE_ZERO_CM - round(level, 3), 3),
+            "level_cm": round(reported, 3),
+            "dist_cm": round(PIPE_ZERO_CM - round(reported, 3), 3),
             "batt_v": round(batt_v, 2),
             "action": dec.action,
             "reason_id": dec.reason_id,
-            "rain72_mm": rain72,
+            "rain72_mm": rain72_mm(day_index),
             "irrigation_m3": irrigation_m3,
         })
     return out
+
+
+def rain72_mm(day_index: int) -> float:
+    """72 h forecast the scheduler sees on a given day (22 mm on rain days)."""
+    return RAIN72_MM if day_index in RAIN_EVENT_DAYS else 0.0
+
+
+def _decide_for(level_cm: float, stage, day_index: int):
+    """Run the real scheduler with the day's wet-forecast value."""
+    return decide(level_cm, stage, rain72_mm(day_index))
 
 
 def _build_series() -> list[dict[str, Any]]:

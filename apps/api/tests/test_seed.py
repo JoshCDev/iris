@@ -9,8 +9,8 @@ from app.db_l1 import (
     insert_weather_snapshot_row,
 )
 from scripts.seed_demo import (AREA_HA, DAYS, LAT, LON, PIPE_ZERO_CM,
-                               PLOT_NAME, RAIN72_MM, TOTAL_STEPS,
-                               _transplant_date, seed_demo)
+                               PLOT_NAME, RAIN72_MM, RAIN_EVENT_DAYS,
+                               TOTAL_STEPS, _transplant_date, seed_demo)
 
 WIB = timezone(timedelta(hours=7))
 
@@ -93,7 +93,7 @@ def test_seed_hold_for_rain_only_with_wet_forecast(tmp_path):
                  .tm_yday for d in holds}
     event_days = {
         (_transplant_date() + timedelta(days=n)).timetuple().tm_yday
-        for n in (18, 19)}
+        for n in RAIN_EVENT_DAYS}
     assert hold_days <= event_days
 
 
