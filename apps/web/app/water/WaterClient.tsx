@@ -93,7 +93,6 @@ export function WaterClient() {
   const [receipt, setReceipt] = useState<GreenReceipt | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [simBusy, setSimBusy] = useState(false);
-  const [simNote, setSimNote] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (plot.activePlotId === null) return;
@@ -128,19 +127,15 @@ export function WaterClient() {
   const simulateReading = async () => {
     if (plot.activePlotId === null) return;
     setSimBusy(true);
-    setSimNote(null);
     try {
       const levelCm = Math.round((5 - Math.random() * 20) * 10) / 10; // +5 … −15 cm
       await postV1WaterObservation(plot.activePlotId, {
         level_cm: levelCm,
         source: "sensor",
       });
-      setSimNote(
-        `Simulated sensor reading logged (level ${fmtNum(levelCm)} cm). Processed by the same scheduler as a field sensor.`,
-      );
       await onSaved();
-    } catch (e) {
-      setSimNote(e instanceof Error ? `Failed: ${e.message}` : "Simulation failed.");
+    } catch {
+      // non-fatal; the button remains usable
     } finally {
       setSimBusy(false);
     }
@@ -225,7 +220,6 @@ export function WaterClient() {
             <div className="small muted" style={{ marginTop: 8 }}>
               Test readings go through the same decision engine as a field sensor.
             </div>
-            {simNote && <div className="callout" style={{ marginTop: 10 }}>{simNote}</div>}
             {today?.latest_leaf && (
               <p className="small" style={{ margin: "8px 0 0" }}>
                 Last leaf on this plot: {classLabelId(today.latest_leaf.class ?? "none")}.{" "}
