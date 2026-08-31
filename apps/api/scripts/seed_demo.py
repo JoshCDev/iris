@@ -32,11 +32,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import db
 from app.config import get_settings
 from app.db import session_scope
-from app.db_l1 import (
-    insert_recommendation,
-    insert_water_observation,
-    insert_weather_snapshot_row,
-)
 from app.irrigation.bmkg_areas import ensure_bmkg_areas
 from app.irrigation.protocol import stage_on
 from app.irrigation.scheduler import REFILL_CM, decide
@@ -282,48 +277,6 @@ def _seed_vision_reports(conn, plot_id: int) -> int:
     return inserted
 
 
-def _seed_v1_records(conn, plot_id: int, series: list[dict[str, Any]]) -> dict[str, int]:
-    """Mirror the demo series into the L1 (v1) tables.
-
-    Every Nth simulated reading becomes a `water_observations` row with a
-    matching `weather_snapshots` row and an immutable `recommendations`
-    row — the same records Today/Water/Records/Assistant read — so the
-    demo is consistent across pages without any manual entry first.
-    Manual-source rows are sprinkled in so the chart's data-kind
-    distinction is visible (sensor vs manual).
-    """
-    step = 96  # one row per simulated day
-    snap_idx = 0
-    n_obs = n_snap = n_rec = 0
-    for i in range(0, len(series), step):
-        s = series[i]
-        observed_at = s["ts"]
-        received_at = observed_at
-        source = "manual" if i % (step * 7) == 0 else "sensor"
-        obs_id = insert_water_observation(
-            conn, plot_id=plot_id, source=source,
-            level_cm=s["level_cm"], observed_at=observed_at,
-            received_at=received_at, quality_state="ok", demo=True)
-        n_obs += 1
-        snap_id = insert_weather_snapshot_row(
-            conn, plot_id=plot_id, source="BMKG", adm4="33.73.01.1003",
-            fetched_at=observed_at,
-            window_end=(datetime.fromisoformat(observed_at)
-                        + timedelta(hours=72)).isoformat(),
-            rain72_mm=s["rain72_mm"], availability="fresh", demo=True)
-        snap_idx += 1
-        n_snap += 1
-        rec_id = insert_recommendation(
-            conn, plot_id=plot_id, observation_id=obs_id,
-            weather_snapshot_id=snap_id, stage=s["stage"],
-            action=s["action"], reason_codes=json.dumps([s["reason_id"]]),
-            ruleset_version="safe-awd-v1", created_at=received_at,
-            needs_review=False, demo=True)
-        n_rec += 1
-    return {"observations": n_obs, "weather_snapshots": n_snap,
-            "recommendations": n_rec}
-
-
 def seed_demo(db_url: str | None = None) -> dict[str, Any]:
     series = _build_series()
     database = db.init_db(db_url) if db_url else db.get_db()
@@ -356,7 +309,6 @@ def seed_demo(db_url: str | None = None) -> dict[str, Any]:
             "SELECT COUNT(*) AS n FROM decisions WHERE plot_id = ?"
             " AND action = 'HOLD_FOR_RAIN'", (plot_id,)).fetchone()["n"]
         vision_reports = _seed_vision_reports(conn, plot_id)
-        v1 = _seed_v1_records(conn, plot_id, series)
     return {
         "plot_id": plot_id,
         "name": PLOT_NAME,
@@ -365,7 +317,6 @@ def seed_demo(db_url: str | None = None) -> dict[str, Any]:
         "irrigations": n_irr,
         "hold_for_rain": int(holds),
         "vision_reports": vision_reports,
-        "v1": v1,
         "replaced_plots": replaced,
         "bmkg_areas": n_areas,
         "is_demo": True,

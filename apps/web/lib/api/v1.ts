@@ -169,42 +169,6 @@ export function getV1WaterHistory(
   return request<WaterHistory>(`/v1/plots/${plotId}/water-history${qs ? `?${qs}` : ""}`);
 }
 
-export interface LeafAssessment {
-  id: number;
-  class: string | null;
-  class_label_en?: string;
-  confidence: number | null;
-  severity: string | null;
-  evidence_type: string;
-  model_version?: string;
-  disclaimer?: string;
-  created_at: string;
-  demo: boolean;
-}
-
-export function postV1LeafAssessment(
-  plotId: number,
-  file: File,
-): Promise<LeafAssessment> {
-  const form = new FormData();
-  form.append("image", file);
-  return request<LeafAssessment>(`/v1/plots/${plotId}/leaf-assessments`, {
-    method: "POST",
-    body: form,
-  });
-}
-
-export function getV1LeafAssessments(
-  plotId: number,
-  opts: { limit?: number; offset?: number } = {},
-): Promise<{ plot_id: number; total: number; assessments: LeafAssessment[] }> {
-  const q = new URLSearchParams();
-  if (opts.limit) q.set("limit", String(opts.limit));
-  if (opts.offset) q.set("offset", String(opts.offset));
-  const qs = q.toString();
-  return request(`/v1/plots/${plotId}/leaf-assessments${qs ? `?${qs}` : ""}`);
-}
-
 export function postV1Confirmation(
   recommendationId: number,
   body: { status: string; note?: string; volume_m3?: number | null; action_at?: string },

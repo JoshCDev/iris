@@ -172,18 +172,14 @@ def test_reseed_cleans_l1_rows(tmp_path):
             model_version="rice-v1", guard_result="ok", class_="blast",
             confidence=0.92, severity="medium",
             created_at="2026-08-30T08:00:00+07:00")
-    # Re-seed must succeed (the reported failure), clear the manually
-    # inserted L1 rows, and repopulate the seeder's own v1 records.
+    # Re-seed must succeed (the reported failure) and leave L1 tables empty.
     summary = seed_demo(url)
     assert summary["replaced_plots"] == 1
     with db.session_scope(db.Database(url)) as conn:
-        # Manual rows (confirmation + leaf assessment) are gone.
-        assert db.count_rows(conn, "action_confirmations") == 0
-        assert db.count_rows(conn, "leaf_assessments") == 0
-        # The seeder's v1 mirror rows exist (one per simulated day).
-        assert db.count_rows(conn, "water_observations") == DAYS
-        assert db.count_rows(conn, "recommendations") == DAYS
-        assert db.count_rows(conn, "weather_snapshots") == DAYS
+        for table in ("water_observations", "recommendations",
+                      "action_confirmations", "weather_snapshots",
+                      "leaf_assessments"):
+            assert db.count_rows(conn, table) == 0
 
 
 def test_seed_engine_paths_real_decisions(tmp_path):

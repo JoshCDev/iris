@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { CrossLinks } from "@/components/CrossLinks";
 import { DemoBadge } from "@/components/DemoBadge";
@@ -8,14 +8,22 @@ import { Icon } from "@/components/Icon";
 import { LevelChart } from "@/components/LevelChart";
 import { ReceiptCard } from "@/components/ReceiptCard";
 import { StageTimeline } from "@/components/StageTimeline";
-import { usePlot } from "@/lib/PlotContext";
-import { ApiError, getHistory, getReceipt, type GreenReceipt, type PlotHistory, type PlotStatus } from "@/lib/api";
+import { latestReport, usePlot } from "@/lib/PlotContext";
 import {
-  getV1WaterHistory,
-  postV1WaterObservation,
-  type WaterHistory,
-  type WaterObservationRow,
-} from "@/lib/api/v1";
+  ApiError,
+  DEMO_PLOT_ID,
+  DEMO_PLOT_NAME,
+  getHistory,
+  getReceipt,
+  getStatus,
+  getWeather,
+  postIngest,
+  type GreenReceipt,
+  type PlotHistory,
+  type PlotStatus,
+  type WeatherForecast,
+} from "@/lib/api";
+import { postV1WaterObservation } from "@/lib/api/v1";
 import { useLocale } from "@/lib/i18n";
 import {
   actionMeta,
@@ -79,94 +87,84 @@ export function WaterEntryForm({ plotId, onSaved }: { plotId: number; onSaved: (
   );
 }
 
-/** Map a v1 observation row to the legacy chart Reading shape. */
-function toReading(o: WaterObservationRow): { ts: string; dist_cm: number; level_cm: number; batt_v: number | null } {
-  return { ts: o.observed_at, dist_cm: 0, level_cm: o.level_cm, batt_v: null };
-}
-
 export function WaterClient() {
   const plot = usePlot();
   const { t } = useLocale();
-  const today = plot.today;
-  const [history, setHistory] = useState<WaterHistory | null>(null);
-  const [legacyHistory, setLegacyHistory] = useState<PlotHistory | null>(null);
+  const leaf = latestReport(plot.reports);
+  const [status, setStatus] = useState<PlotStatus | null>(null);
+  const [history, setHistory] = useState<PlotHistory | null>(null);
   const [receipt, setReceipt] = useState<GreenReceipt | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [weather, setWeather] = useState<WeatherForecast | null>(null);
   const [simBusy, setSimBusy] = useState(false);
+  const [simNote, setSimNote] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (plot.activePlotId === null) return;
     try {
-      setHistory(await getV1WaterHistory(plot.activePlotId, { limit: 100 }));
-    } catch {
-      // keep previous rows; the plot context refresh covers errors
-    }
-    try {
-      // Dense 7-day sensor record (demo series). Plotted as the continuous
-      // line; the v1 observations (manual/sensor entries) overlay on top.
-      setLegacyHistory(await getHistory(plot.activePlotId, 7));
-    } catch {
-      // non-fatal; the v1 observations alone still render
-    }
-    try {
-      setReceipt(await getReceipt(plot.activePlotId, 100));
-      setReceiptError(null);
+      const [s, h, w] = await Promise.all([
+        getStatus(DEMO_PLOT_ID),
+        getHistory(DEMO_PLOT_ID, 7),
+        getWeather(),
+      ]);
+      setStatus(s);
+      setHistory(h);
+      setWeather(w);
+      setError(null);
+      try {
+        setReceipt(await getReceipt(DEMO_PLOT_ID, 100));
+        setReceiptError(null);
+      } catch (e) {
+        setReceipt(null);
+        setReceiptError(e instanceof ApiError ? e.message : "Receipt not available.");
+      }
     } catch (e) {
-      setReceipt(null);
-      setReceiptError(e instanceof ApiError ? e.message : "Receipt not available.");
+      setError(e instanceof Error ? e.message : "Failed to load data.");
     }
-  }, [plot.activePlotId]);
+  }, []);
 
-  const onSaved = useCallback(() => {
+  useEffect(() => {
     refresh();
-    plot.refresh();
-  }, [refresh, plot.refresh]);
+    const t = setInterval(refresh, 60_000);
+    return () => clearInterval(t);
+  }, [refresh]);
 
-  // Demo simulation: post a plausible sensor reading through the same v1
-  // path so it lands in the shared water_observations/recommendations records.
+  // Demo simulation: plausible sawtooth drawdown/refill distance.
+  // pipe_zero = 30 cm → level −15…+5 cm ⇔ dist_cm 25…45 m.
   const simulateReading = async () => {
-    if (plot.activePlotId === null) return;
     setSimBusy(true);
+    setSimNote(null);
     try {
-      const levelCm = Math.round((5 - Math.random() * 20) * 10) / 10; // +5 … −15 cm
-      await postV1WaterObservation(plot.activePlotId, {
-        level_cm: levelCm,
-        source: "sensor",
-      });
-      await onSaved();
-    } catch {
-      // non-fatal; the button remains usable
+      const distCm = Math.round((26 + Math.random() * 18) * 10) / 10;
+      const battV = Math.round((3.85 + Math.random() * 0.2) * 100) / 100;
+      await postIngest({ device_plot_name: DEMO_PLOT_NAME, dist_cm: distCm, batt_v: battV });
+      setSimNote(
+        `Simulated reading logged (distance ${fmtNum(distCm)} cm, battery ${fmtNum(battV, 2)} V). Processed by the same scheduler as a field sensor.`,
+      );
+      await refresh();
+      plot.refresh();
+    } catch (e) {
+      setSimNote(e instanceof Error ? `Failed: ${e.message}` : "Simulation failed.");
     } finally {
       setSimBusy(false);
     }
   };
 
-  const water = today?.water;
-  const rec = today?.recommendation;
-  const weather = today?.weather;
-  const readings = history?.observations ?? [];
-
-  // Chart series: the dense legacy 7-day record plus the v1 observations
-  // (manual/sensor) overlaid at their true timestamps, deduped and sorted.
-  const chartReadings = useMemo(() => {
-    const merged = new Map<string, { ts: string; dist_cm: number; level_cm: number; batt_v: number | null }>();
-    for (const r of legacyHistory?.readings ?? []) {
-      merged.set(r.ts, { ts: r.ts, dist_cm: r.dist_cm, level_cm: r.level_cm, batt_v: r.batt_v });
-    }
-    // v1 rows win on timestamp ties (they are the authoritative records).
-    for (const o of readings) {
-      merged.set(o.observed_at, toReading(o));
-    }
-    return [...merged.values()].sort((a, b) => a.ts.localeCompare(b.ts));
-  }, [legacyHistory, readings]);
+  if (error) {
+    return (
+      <div className="callout callout--danger">
+        <strong>Cannot reach the data server.</strong> Try again shortly.
+      </div>
+    );
+  }
 
   return (
     <div className="grid">
       <CrossLinks current="water" />
-      {today?.plot.is_demo && (
+      {status?.is_demo && (
         <div className="demo-banner">
           <DemoBadge />
-          <span>Figures on this page are from the built-in demo plot “{today.plot.name}”, not a production field.</span>
+          <span>Figures on this page are from the built-in demo plot “{status.name}”, not a production field.</span>
         </div>
       )}
 
@@ -176,7 +174,13 @@ export function WaterClient() {
           <p className="muted">{t("common.loading")}</p>
         </div>
       ) : (
-        <WaterEntryForm plotId={plot.activePlotId} onSaved={onSaved} />
+        <WaterEntryForm
+          plotId={plot.activePlotId}
+          onSaved={() => {
+            refresh();
+            plot.refresh();
+          }}
+        />
       )}
 
       {/* Next action + rain strip */}
@@ -186,17 +190,15 @@ export function WaterClient() {
           <p className="small muted" style={{ margin: 0 }}>
             Human in the loop. Recommendation only.
           </p>
-          {rec ? (
+          {status ? (
             <>
-              <div className={`next-action__verb next-action__verb--${actionMeta(rec.action).tone}`}>
-                {actionVerb(rec.action)}
+              <div className={`next-action__verb next-action__verb--${actionMeta(status.action).tone}`}>
+                {actionVerb(status.action)}
               </div>
-              <p style={{ margin: 0, lineHeight: 1.6 }}>{rec.reason_codes[0] ?? rec.action}</p>
+              <p style={{ margin: 0, lineHeight: 1.6 }}>{reasonEn(status.reason_id)}</p>
               <div className="small muted">
-                Stage: {STAGE_META[water?.stage ?? ""]?.label ?? water?.stage ?? "n/a"} · water{" "}
-                {fmtNum(water?.level_cm ?? null)} cm · observed{" "}
-                {fmtTs(today?.freshness.last_observed_at)}
-                {rec.confirmation_state === "confirmed" ? " · confirmed" : " · pending confirmation"}
+                Stage: {STAGE_META[status.stage]?.label ?? status.stage} · d {status.stage_days} · next check {fmtTs(status.next_check)}
+                {status.last_ts ? ` · last reading ${fmtTs(status.last_ts)}` : ""}
               </div>
             </>
           ) : (
@@ -220,10 +222,11 @@ export function WaterClient() {
             <div className="small muted" style={{ marginTop: 8 }}>
               Test readings go through the same decision engine as a field sensor.
             </div>
-            {today?.latest_leaf && (
+            {simNote && <div className="callout" style={{ marginTop: 10 }}>{simNote}</div>}
+            {leaf && (
               <p className="small" style={{ margin: "8px 0 0" }}>
-                Last leaf on this plot: {classLabelId(today.latest_leaf.class ?? "none")}.{" "}
-                <Link href={askLeafHref(today.latest_leaf.class)}>Ask what it means for water →</Link>
+                Last leaf on this plot: {classLabelId(leaf.top_class)}.{" "}
+                <Link href={askLeafHref(leaf.top_class)}>Ask what it means for water →</Link>
               </p>
             )}
           </div>
@@ -232,34 +235,36 @@ export function WaterClient() {
         <div style={{ display: "grid", gap: 14, alignContent: "start" }}>
           <div className="rain-strip">
             <Icon name="cloud-rain" size={24} aria-hidden="true" />
-            <strong>{weather?.rain72_mm === null || weather?.rain72_mm === undefined ? "n/a" : `${fmtNum(weather.rain72_mm)} mm`}</strong>
+            <strong>{fmtNum(status?.rain72_mm ?? weather?.rain72_mm)} mm</strong>
             <span>72-hour rain total · BMKG · supporting only</span>
             {weather && (
-              <span className={`status-pill${weather.availability !== "fresh" ? " status-pill--alert" : ""}`}>
-                {weather.availability === "fresh"
-                  ? "fresh forecast"
-                  : weather.availability === "stale-cache"
-                    ? "using stored forecast"
-                    : "forecast unavailable"}
+              <span className={`status-pill${weather.stale ? " status-pill--alert" : ""}`}>
+                {weather.stale ? "using stored forecast" : "fresh forecast"}
               </span>
             )}
           </div>
-          {weather?.secondary_review?.needs_review && (
+          {weather?.hitl && (
+            <p className="small muted" style={{ margin: 0, lineHeight: 1.5 }}>
+              Persistence LogReg second opinion: P(wet){" "}
+              {fmtNum(weather.hitl.logreg_p_wet * 100)}%
+              {weather.hitl.logreg_wet ? " (wet)" : " (dry)"}. Scheduler still
+              uses BMKG only.
+            </p>
+          )}
+          {weather?.hitl?.needs_review && (
             <div className="callout callout--warning">
-              <strong>Human review (rain).</strong> The rain forecast needs a
-              second look — check local conditions before relying on it.
+              <strong>Human review (rain).</strong> {weather.hitl.note}{" "}
+              Persistence LogReg P(wet) {fmtNum(weather.hitl.logreg_p_wet * 100)}%.
+              BMKG does not skip irrigation by itself if the pipe is already dry.
             </div>
           )}
           <div className="card">
             <h3>Growth-stage timeline</h3>
             <p className="small muted" style={{ marginTop: 8 }}>
-              Stage: {STAGE_META[water?.stage ?? ""]?.label ?? water?.stage ?? "n/a"}
+              Day {status?.stage_days ?? "n/a"} after transplant →{" "}
+              {status ? STAGE_META[status.stage]?.label ?? status.stage : "…"}
             </p>
-            {water && (
-              <StageTimeline
-                status={{ stage: water.stage, stage_days: 0, plot_id: 0, name: "", level_cm: null, action: null, reason_id: null, rain72_mm: null, next_check: null, last_ts: null, is_demo: false } as PlotStatus}
-              />
-            )}
+            {status && <StageTimeline status={status} />}
           </div>
         </div>
       </div>
@@ -269,10 +274,13 @@ export function WaterClient() {
         <div className="section-heading" style={{ marginBottom: 12 }}>
           <h3>7-day water-level trace</h3>
           <span className="small muted">
-            {chartReadings.length > 0 ? `${fmtInt(chartReadings.length)} readings` : ""}
+            {history ? `${fmtInt(history.readings.length)} readings` : ""}
           </span>
         </div>
-        <LevelChart readings={chartReadings} dataKind={water?.kind ?? null} />
+        <LevelChart
+          readings={history?.readings ?? []}
+          dataKind={plot.today?.water.kind ?? null}
+        />
       </div>
 
       {/* Receipt */}

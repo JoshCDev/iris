@@ -104,8 +104,7 @@ def weather_state_payload(conn, plot_id: int) -> dict:
                 "secondary_review": {"needs_review": True}}
     availability = snap.availability
     stale_since = snap.stale_since
-    # Demo snapshots are a fixed, self-contained dataset — never age them.
-    if availability == "fresh" and not snap.demo and _is_stale(snap):
+    if availability == "fresh" and _is_stale(snap):
         availability = "stale-cache"
         stale_since = snap.fetched_at
     return {"source": snap.source, "adm4": snap.adm4,
