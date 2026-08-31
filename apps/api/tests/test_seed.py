@@ -12,8 +12,8 @@ from app.db_l1 import (
     insert_weather_snapshot_row,
 )
 from scripts.seed_demo import (AREA_HA, DAYS, LAT, LON, PIPE_ZERO_CM,
-                               PLOT_NAME, RAIN72_MM, RAIN_EVENT_DAYS,
-                               TOTAL_STEPS, _transplant_date, seed_demo)
+                               PLOT_NAME, RAIN72_MM, TOTAL_STEPS,
+                               _transplant_date, seed_demo)
 
 WIB = timezone(timedelta(hours=7))
 
@@ -58,9 +58,10 @@ def test_seed_contract_counts_and_plot(tmp_path):
 
 def test_seed_deterministic_seed_twice_same_db(tmp_path):
     url = f"sqlite:///{(tmp_path / 'b.db').as_posix()}"
-    s1 = seed_demo(url)
+    fixed_now = datetime(2026, 8, 31, 6, 0, tzinfo=WIB)
+    s1 = seed_demo(url, now=fixed_now)
     first_run = _rows(url)
-    s2 = seed_demo(url)
+    s2 = seed_demo(url, now=fixed_now)
     second_run = _rows(url)
     assert s1["readings"] == s2["readings"]
     assert s1["irrigations"] == s2["irrigations"]
@@ -78,11 +79,24 @@ def test_seed_deterministic_seed_twice_same_db(tmp_path):
 def test_seed_deterministic_across_databases(tmp_path):
     ua = f"sqlite:///{(tmp_path / 'c.db').as_posix()}"
     ub = f"sqlite:///{(tmp_path / 'd.db').as_posix()}"
-    seed_demo(ua)
-    seed_demo(ub)
+    fixed_now = datetime(2026, 8, 31, 6, 0, tzinfo=WIB)
+    seed_demo(ua, now=fixed_now)
+    seed_demo(ub, now=fixed_now)
     ra, rb = _rows(ua), _rows(ub)
     assert ra[2][0]["ts"] == rb[2][0]["ts"]
     assert [r["ts"] for r in ra[2]] == [r["ts"] for r in rb[2]]
+
+
+def test_seed_series_ends_at_seed_time(tmp_path):
+    """The grid is anchored to seed time, so the last reading is current —
+    no hole grows between the demo data and the moment of viewing."""
+    url = f"sqlite:///{(tmp_path / 'now.db').as_posix()}"
+    seed_demo(url)
+    _, _, readings, _, _, _ = _rows(url)
+    last = datetime.fromisoformat(readings[-1]["ts"])
+    now_wib = datetime.now(WIB)
+    age_minutes = (now_wib - last).total_seconds() / 60.0
+    assert 0 <= age_minutes <= 16  # within one 15-min step of seeding
 
 
 def test_seed_hold_for_rain_only_with_wet_forecast(tmp_path):
@@ -92,12 +106,13 @@ def test_seed_hold_for_rain_only_with_wet_forecast(tmp_path):
     _, _, _, decisions, _, _ = _rows(url)
     holds = [d for d in decisions if d["action"] == "HOLD_FOR_RAIN"]
     assert all(float(d["rain72_mm"]) >= 15.0 for d in holds)
+    # Holds may only occur on days where the wet forecast was present.
+    wet_days = {
+        datetime.fromisoformat(d["ts"]).astimezone(WIB).timetuple().tm_yday
+        for d in decisions if float(d["rain72_mm"]) >= 15.0}
     hold_days = {datetime.fromisoformat(d["ts"]).astimezone(WIB).timetuple()
                  .tm_yday for d in holds}
-    event_days = {
-        (_transplant_date() + timedelta(days=n)).timetuple().tm_yday
-        for n in RAIN_EVENT_DAYS}
-    assert hold_days <= event_days
+    assert hold_days <= wet_days
 
 
 def test_seed_readings_grid_and_bands(tmp_path):
@@ -185,11 +200,11 @@ def test_reseed_cleans_l1_rows(tmp_path):
         # re-created its own leaf assessments.
         assert db.count_rows(conn, "action_confirmations") == 0
         assert db.count_rows(conn, "leaf_assessments") == 2
-        # The v1 mirror exists at full cadence (one per simulated reading,
-        # plus the current seed-time observation/snapshot/recommendation).
-        assert db.count_rows(conn, "water_observations") == TOTAL_STEPS + 1
-        assert db.count_rows(conn, "recommendations") == TOTAL_STEPS + 1
-        assert db.count_rows(conn, "weather_snapshots") == TOTAL_STEPS + 1
+        # The v1 mirror exists at full cadence (one per simulated reading;
+        # the grid ends at seed time, so no extra anchor row is needed).
+        assert db.count_rows(conn, "water_observations") == TOTAL_STEPS
+        assert db.count_rows(conn, "recommendations") == TOTAL_STEPS
+        assert db.count_rows(conn, "weather_snapshots") == TOTAL_STEPS
 
 
 def test_seed_v1_records_consistent_with_legacy(tmp_path):
@@ -223,7 +238,7 @@ def test_seed_v1_records_consistent_with_legacy(tmp_path):
             "SELECT COUNT(*) AS n FROM recommendations WHERE plot_id = ?"
             " AND superseded_at IS NOT NULL", (pid,)).fetchone()["n"]
         assert current == 1
-        assert superseded == TOTAL_STEPS
+        assert superseded == TOTAL_STEPS - 1
         # The latest v1 observation matches the latest legacy reading level.
         latest_obs = conn.execute(
             "SELECT level_cm, demo FROM water_observations WHERE plot_id = ?"

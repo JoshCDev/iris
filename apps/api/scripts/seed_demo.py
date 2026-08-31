@@ -8,8 +8,8 @@ Contract:
 - plot "Sawah Demo - Salatiga" (1 ha, pipe_zero 30 cm, lat -7.3305,
   lon 110.5064, transplant_date = today(WIB) - 54 d, is_demo = 1)
 - 2880 readings = 30 days x 96/day @ 15 min, covering season days 24-53
-  (all vegetative/AWD), anchored to transplant midnight + 24 d
-  (deterministic within a day)
+  (all vegetative/AWD), anchored so the LAST reading lands at seed time
+  (rounded to 15 min) — the demo is current whenever it is (re)seeded
 - drawdown 0.8 cm/day (docs/METHODOLOGY.md E3 assumption) with a diurnal
   cycle and day-to-day ET variation; E3's 0.5x below-zero refinement is
   NOT applied so the AWD trigger is exercised inside the demo window
@@ -97,12 +97,16 @@ def _transplant_date(today: date | None = None) -> date:
             - timedelta(days=TRANSPLANT_OFFSET_DAYS))
 
 
-def _grid_start_utc(transplant: date) -> datetime:
-    """Season-day SEASON_START_DAY midnight WIB expressed in UTC."""
-    start = (datetime(transplant.year, transplant.month, transplant.day,
-                      tzinfo=WIB)
-             + timedelta(days=SEASON_START_DAY))
-    return start.astimezone(timezone.utc)
+def _grid_start_utc(now: datetime) -> datetime:
+    """Grid start so the LAST reading lands at `now` (rounded to 15 min).
+
+    Anchoring the window to seed time — not transplant midnight — keeps the
+    demo current: no hole grows between the last seeded reading and the
+    moment someone opens the app.
+    """
+    end = now.replace(minute=(now.minute // 15) * 15,
+                      second=0, microsecond=0)
+    return end - timedelta(minutes=CADENCE_MIN * (TOTAL_STEPS - 1))
 
 
 def _diurnal_factor(minute_of_day: float) -> float:
@@ -208,8 +212,8 @@ def _decide_for(level_cm: float, stage, day_index: int):
     return decide(level_cm, stage, rain72_mm(day_index))
 
 
-def _build_series() -> list[dict[str, Any]]:
-    start = _grid_start_utc(_transplant_date())
+def _build_series(now: datetime) -> list[dict[str, Any]]:
+    start = _grid_start_utc(now)
     series = _simulate_series(start)
     holds = sum(1 for s in series if s["action"] == "HOLD_FOR_RAIN")
     if holds < 1:
@@ -243,12 +247,13 @@ def _vision_services():
     return _VISION["svc"]
 
 
-def _seed_vision_reports(conn, plot_id: int) -> int:
+def _seed_vision_reports(conn, plot_id: int, now: datetime) -> int:
     """Run the REAL triage pipeline on two bundled sample images and persist
     the results as demo vision reports (is_demo=1).
 
     Deterministic: same bytes -> same ONNX logits -> same stored values.
     Fast: one cached ONNX session, exactly two inferences per seed run.
+    Reports are anchored a few minutes before the series' end time.
     """
     pack_dir = Path(__file__).resolve().parents[1] / "crop_packs" / "rice"
     samples = ["rice-blast-demo.jpg", "rice-blast-demo.webp"]
@@ -259,7 +264,8 @@ def _seed_vision_reports(conn, plot_id: int) -> int:
         return 0
     packs, inference, guard, advisory = services
 
-    base_ts = _grid_start_utc(_transplant_date())
+    base_ts = now.replace(minute=(now.minute // 15) * 15,
+                          second=0, microsecond=0)
     inserted = 0
     for n, name in enumerate(samples):
         path = pack_dir / name
@@ -287,7 +293,7 @@ def _seed_vision_reports(conn, plot_id: int) -> int:
         )
         advisories = advisory.build_bilingual(RICE_SLUG,
                                               predicted.class_slug)
-        ts = (base_ts + timedelta(days=DAYS - 1, minutes=15 * n)).isoformat()
+        ts = (base_ts - timedelta(minutes=30 - 15 * n)).isoformat()
         conn.execute(
             "INSERT INTO vision_reports (plot_id, ts, image_path, top_class,"
             " confidence, severity, language, advisory_json, fusion_json,"
@@ -305,10 +311,9 @@ def _seed_v1_records(conn, plot_id: int, series: list[dict[str, Any]]) -> dict[s
     Every simulated reading becomes a `water_observations` row with a
     matching `weather_snapshots` row and an immutable `recommendations`
     row — the same records Today/Water/Records/Assistant read — so the
-    chart history is dense and every page shows the same records without
-    a manual entry first. A final observation is anchored at seed time so
-    the plot reads as current, and all older recommendations are marked
-    superseded (only the latest stays pending).
+    chart history is dense, ends at seed time, and every page shows the
+    same records without a manual entry first. All older recommendations
+    are marked superseded (only the latest stays pending).
     """
     n_obs = n_snap = n_rec = 0
     last_rec_id: int | None = None
@@ -334,44 +339,16 @@ def _seed_v1_records(conn, plot_id: int, series: list[dict[str, Any]]) -> dict[s
             needs_review=False, demo=True)
         n_rec += 1
 
-    # Anchor the plot at seed time: one current observation + snapshot +
-    # recommendation carrying the series' last level, so Today/Water read
-    # as fresh instead of ending yesterday.
-    now = datetime.now(timezone.utc).isoformat()
-    last_level = series[-1]["level_cm"]
-    days = max(0, (datetime.now(WIB).date()
-                   - date.fromisoformat(_transplant_date().isoformat())).days)
-    stage = stage_on(days)
-    dec = decide(last_level, stage, 0.0)
-    obs_id = insert_water_observation(
-        conn, plot_id=plot_id, source="sensor", level_cm=last_level,
-        raw_distance=round(PIPE_ZERO_CM - last_level, 3), observed_at=now,
-        received_at=now, quality_state="ok", demo=True)
-    n_obs += 1
-    snap_id = insert_weather_snapshot_row(
-        conn, plot_id=plot_id, source="BMKG", adm4="33.73.01.1003",
-        fetched_at=now,
-        window_end=(datetime.fromisoformat(now)
-                    + timedelta(hours=72)).isoformat(),
-        rain72_mm=0.0, availability="fresh", demo=True)
-    n_snap += 1
-    last_rec_id = insert_recommendation(
-        conn, plot_id=plot_id, observation_id=obs_id,
-        weather_snapshot_id=snap_id, stage=stage.value, action=dec.action,
-        reason_codes=json.dumps([dec.reason_id]),
-        ruleset_version="safe-awd-v1", created_at=now,
-        needs_review=False, demo=True)
-    n_rec += 1
-
     # Older recommendations are superseded by the latest (same semantics as
     # the live POST route), so Records shows one current + the rest history.
     supersede_older_recommendations(
-        conn, plot_id, keep_id=last_rec_id, superseded_at=now)
+        conn, plot_id, keep_id=last_rec_id,
+        superseded_at=series[-1]["ts"])
     return {"observations": n_obs, "weather_snapshots": n_snap,
             "recommendations": n_rec}
 
 
-def _seed_leaf_assessments(conn, plot_id: int) -> int:
+def _seed_leaf_assessments(conn, plot_id: int, now: datetime) -> int:
     """Run the REAL triage pipeline on two bundled sample images and store
     the results as demo `leaf_assessments` rows (is_demo=1) — the v1 leaf
     records Today reads."""
@@ -409,7 +386,7 @@ def _seed_leaf_assessments(conn, plot_id: int) -> int:
             default_expert_review=bool(risk_rule.get("default_expert_review",
                                                      False)),
         )
-        created = (datetime.now(timezone.utc)
+        created = (now.astimezone(timezone.utc)
                    - timedelta(minutes=15 * n)).isoformat()
         insert_leaf_assessment(
             conn, plot_id=plot_id,
@@ -422,8 +399,12 @@ def _seed_leaf_assessments(conn, plot_id: int) -> int:
     return inserted
 
 
-def seed_demo(db_url: str | None = None) -> dict[str, Any]:
-    series = _build_series()
+def seed_demo(db_url: str | None = None, *,
+              now: datetime | None = None) -> dict[str, Any]:
+    # The grid ends at seed time (rounded to 15 min) so the demo is current
+    # when someone opens the app; tests inject a fixed `now` for determinism.
+    now_dt = now or datetime.now(WIB)
+    series = _build_series(now_dt)
     database = db.init_db(db_url) if db_url else db.get_db()
     with session_scope(database) as conn:
         n_areas = 0
@@ -453,9 +434,9 @@ def seed_demo(db_url: str | None = None) -> dict[str, Any]:
         holds = conn.execute(
             "SELECT COUNT(*) AS n FROM decisions WHERE plot_id = ?"
             " AND action = 'HOLD_FOR_RAIN'", (plot_id,)).fetchone()["n"]
-        vision_reports = _seed_vision_reports(conn, plot_id)
+        vision_reports = _seed_vision_reports(conn, plot_id, now_dt)
         v1 = _seed_v1_records(conn, plot_id, series)
-        leaf_assessments = _seed_leaf_assessments(conn, plot_id)
+        leaf_assessments = _seed_leaf_assessments(conn, plot_id, now_dt)
     return {
         "plot_id": plot_id,
         "name": PLOT_NAME,
