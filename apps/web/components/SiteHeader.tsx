@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import { PlotBar } from "@/components/PlotBar";
 
 const LINKS = [
   { href: "/", label: "Plot" },
@@ -45,7 +44,6 @@ export function SiteHeader() {
           ))}
         </nav>
       </div>
-      <PlotBar />
     </header>
   );
 }
