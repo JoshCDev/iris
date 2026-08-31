@@ -44,15 +44,21 @@ test("keyboard-only farmer journey", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page.getByRole("status").filter({ hasText: /dikonfirmasi/i })).toBeVisible();
 
-  // ── 4. Screen a leaf (sample chip via keyboard) ──
+  // ── 4. Screen a leaf (upload a real photo, then check) ──
   await page.goto("/health");
   await expect(page.getByLabel("Upload a leaf photo")).toBeVisible();
-  const blast = page.getByRole("button", { name: /blast/i }).first();
-  await blast.focus();
-  await page.keyboard.press("Enter"); // runs the ONNX triage on the demo sample
-  await expect(page.getByRole("button", { name: "Check leaf" })).toBeDisabled();
+  // The sample-chip shortcut is gone; upload the bundled demo leaf photo via
+  // the hidden file input (the interactive trip stays keyboard-first).
+  // Path is relative to the web root (playwright cwd) → repo apps/api crop pack.
+  const demoLeaf = "../api/crop_packs/rice/rice-blast-demo.jpg";
+  await page.locator('input[type="file"]').setInputFiles(demoLeaf);
+  // The dropzone hides once a photo is picked; the button turns into Check leaf.
+  await expect(page.getByLabel("Upload a leaf photo")).toBeHidden();
+  await page.getByRole("button", { name: "Check leaf" }).press("Enter");
   // The result card appears once the triage reply lands.
   await expect(page.getByText("Screening, not a diagnosis.")).toBeVisible();
+  // The button now prompts for the next photo.
+  await expect(page.getByRole("button", { name: "Check another leaf" })).toBeVisible();
 
   // ── 5. Request an explanation (assistant, keyboard-typed question) ──
   await page.goto("/assistant");

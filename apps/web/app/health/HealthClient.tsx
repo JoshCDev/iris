@@ -1,28 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { CrossLinks } from "@/components/CrossLinks";
 import { DemoBadge } from "@/components/DemoBadge";
 import { FusionBanner } from "@/components/FusionBanner";
 import { SeverityGauge } from "@/components/SeverityGauge";
-import { StatusPill } from "@/components/StatusPill";
 import { usePlot } from "@/lib/PlotContext";
 import {
   ApiError,
   DEMO_PLOT_ID,
-  getVisionReports,
   postVisionPredict,
   type VisionPrediction,
-  type VisionReportRow,
 } from "@/lib/api";
-import { classLabelId, fmtNum, fmtTs, severityLabelId, severityTone } from "@/lib/format";
-
-const SAMPLES = [
-  { src: "/demo_samples/rice/rice-blast-demo.jpg", name: "rice-blast-demo.jpg", label: "Blast (field photo)", kind: "image/jpeg" },
-  { src: "/demo_samples/rice/rice-blast-demo.svg", name: "rice-blast-demo.svg", label: "Blast (illustration)", kind: "image/svg+xml" },
-  { src: "/demo_samples/rice/rice-brown-spot-demo.svg", name: "rice-brown-spot-demo.svg", label: "Brown spot (illustration)", kind: "image/svg+xml" },
-  { src: "/demo_samples/rice/rice-tungro-demo.svg", name: "rice-tungro-demo.svg", label: "Tungro (illustration)", kind: "image/svg+xml" },
-];
+import { classLabelId, fmtNum } from "@/lib/format";
 
 interface Rejection {
   code: string;
@@ -47,22 +37,8 @@ export function HealthClient() {
   const [result, setResult] = useState<VisionPrediction | null>(null);
   const [rejection, setRejection] = useState<Rejection | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [reports, setReports] = useState<VisionReportRow[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const refreshReports = useCallback(async () => {
-    try {
-      const res = await getVisionReports();
-      setReports(res.reports);
-    } catch {
-      // non-fatal; list stays empty
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshReports();
-  }, [refreshReports]);
 
   const pickFile = useCallback(
     (f: File | null | undefined) => {
@@ -87,7 +63,6 @@ export function HealthClient() {
       try {
         const pred = await postVisionPredict({ file: target, plotId: DEMO_PLOT_ID, language: "en" });
         setResult(pred);
-        refreshReports();
         refreshPlot();
       } catch (e) {
         setResult(null);
@@ -100,23 +75,7 @@ export function HealthClient() {
         setBusy(false);
       }
     },
-    [refreshReports, refreshPlot],
-  );
-
-  const useSample = useCallback(
-    async (sample: (typeof SAMPLES)[number]) => {
-      try {
-        const res = await fetch(sample.src);
-        if (!res.ok) throw new Error(`Sample not found: ${sample.src}`);
-        const blob = await res.blob();
-        const f = new File([blob], sample.name, { type: sample.kind });
-        pickFile(f);
-        await runPredict(f);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not load the sample.");
-      }
-    },
-    [pickFile, runPredict],
+    [refreshPlot],
   );
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -125,38 +84,52 @@ export function HealthClient() {
     pickFile(e.dataTransfer.files?.[0]);
   };
 
+  // Start over: drop the current photo + result so a fresh photo can be picked.
+  const resetForNewPhoto = () => {
+    setFile(null);
+    setResult(null);
+    setRejection(null);
+    setError(null);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  };
+
   return (
     <div className="grid">
       <CrossLinks current="health" />
     <div className="grid grid--2" style={{ alignItems: "start" }}>
       {/* ── Upload workbench ── */}
       <div className="card" style={{ display: "grid", gap: 14 }}>
-        <div
-          className={`upload-dropzone${dragOver ? " is-drag" : ""}`}
-          role="button"
-          tabIndex={0}
-          aria-label="Upload a leaf photo"
-          onClick={() => fileInputRef.current?.click()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
-        >
-          <span>Leaf photo</span>
-          <strong>Drop a photo here</strong>
-          <small>or click to choose a file · JPG / PNG / WebP · non-leaf images are rejected</small>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => pickFile(e.target.files?.[0])}
-          />
-        </div>
+        {!file && (
+          <div
+            className={`upload-dropzone${dragOver ? " is-drag" : ""}`}
+            role="button"
+            tabIndex={0}
+            aria-label="Upload a leaf photo"
+            onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={onDrop}
+          >
+            <span>Leaf photo</span>
+            <strong>Drop a photo here</strong>
+            <small>or click to choose a file · JPG / PNG / WebP · non-leaf images are rejected</small>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => pickFile(e.target.files?.[0])}
+            />
+          </div>
+        )}
 
         {previewUrl && (
           <figure className="photo-preview" style={{ margin: 0 }}>
@@ -172,21 +145,8 @@ export function HealthClient() {
           disabled={!file || busy}
           onClick={() => file && runPredict(file)}
         >
-          {busy ? "Checking…" : "Check leaf"}
+          {busy ? "Checking…" : result ? "Check another leaf" : "Check leaf"}
         </button>
-
-        <div>
-          <h3 className="panel-heading" style={{ fontSize: "1.05rem", marginBottom: 8 }}>Try a sample (demo)</h3>
-          <div className="sample-grid">
-            {SAMPLES.map((s) => (
-              <button key={s.src} type="button" className="sample-chip" disabled={busy} onClick={() => useSample(s)}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s.src} alt="" />
-                <span>{s.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
 
         {rejection && (
           <div className="callout callout--danger">
@@ -201,7 +161,7 @@ export function HealthClient() {
         )}
       </div>
 
-      {/* ── Result + history ── */}
+      {/* ── Result ── */}
       <div style={{ display: "grid", gap: 18 }}>
         {result ? (
           <div className="card card--strong" style={{ display: "grid", gap: 14 }}>
@@ -243,29 +203,9 @@ export function HealthClient() {
           </div>
         ) : (
           <div className="sub-panel muted">
-            No result yet. Upload a photograph or pick a sample. Triage, severity, and fusion appear here.
+            No result yet. Upload a photograph. Triage, severity, and fusion appear here.
           </div>
         )}
-
-        <div>
-          <h3 className="panel-heading" style={{ fontSize: "1.15rem", marginBottom: 10 }}>Recent reports</h3>
-          {reports.length === 0 ? (
-            <p className="muted small">No reports yet.</p>
-          ) : (
-            <div className="report-list">
-              {reports.slice(0, 6).map((r) => (
-                <div key={r.report_id} className="report-row">
-                  <strong>{classLabelId(r.top_class)}</strong>
-                  <span className="muted small">{fmtNum(r.confidence * 100)}%</span>
-                  <StatusPill label={severityLabelId(r.severity)} tone={severityTone(r.severity) === "urgent" ? "danger" : severityTone(r.severity) === "high" ? "alert" : "default"} />
-                  {r.is_demo && <DemoBadge small />}
-                  <span className="spacer" />
-                  <span className="muted small">{fmtTs(r.ts)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </div>
     </div>
