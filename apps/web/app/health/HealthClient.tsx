@@ -96,6 +96,13 @@ export function HealthClient() {
     });
   };
 
+  // "Check another leaf": reset, then reopen the native file picker once the
+  // dropzone has re-rendered (the input is inside the now-remounted dropzone).
+  const checkAnotherLeaf = () => {
+    resetForNewPhoto();
+    requestAnimationFrame(() => fileInputRef.current?.click());
+  };
+
   return (
     <div className="grid">
       <CrossLinks current="health" />
@@ -143,7 +150,7 @@ export function HealthClient() {
           type="button"
           className="button button--primary"
           disabled={!file || busy}
-          onClick={() => file && runPredict(file)}
+          onClick={() => (result ? checkAnotherLeaf() : file && runPredict(file))}
         >
           {busy ? "Checking…" : result ? "Check another leaf" : "Check leaf"}
         </button>
