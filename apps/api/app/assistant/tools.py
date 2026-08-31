@@ -288,7 +288,11 @@ def get_receipt(plot_id: int) -> dict[str, Any]:
 
 
 def get_risk_fusion(plot_id: int) -> dict[str, Any]:
-    from app.db import get_plot, latest_decision, latest_reading, session_scope
+    """Combined plot concern from the v1 records (leaf_assessments,
+    water_observations, recommendations) — the same unified data the
+    rest of the app reads, so the assistant's fusion agrees with the
+    screens shown on Water/Leaf/Ask."""
+    from app.db import get_plot, session_scope
     from app.fusion.risk import assess, awd_state_from
 
     pid = int(plot_id)
@@ -296,22 +300,29 @@ def get_risk_fusion(plot_id: int) -> dict[str, Any]:
         plot = get_plot(conn, pid)
         if plot is None:
             return {"error": f"plot {pid} not found"}
-        reading = latest_reading(conn, pid)
-        decision = latest_decision(conn, pid)
-        vr = conn.execute(
-            "SELECT top_class FROM vision_reports WHERE plot_id = ?"
-            " ORDER BY ts DESC LIMIT 1", (pid,)).fetchone()
-    if reading is None:
-        return {"error": "no reading yet for this plot"}
-    level_cm = float(reading["level_cm"])
-    stage_val = (decision["stage"] if decision is not None
+        obs = conn.execute(
+            "SELECT level_cm FROM water_observations WHERE plot_id = ?"
+            " ORDER BY id DESC LIMIT 1", (pid,)).fetchone()
+        rec = conn.execute(
+            "SELECT r.stage, w.rain72_mm FROM recommendations r"
+            " LEFT JOIN weather_snapshots w"
+            "   ON w.id = r.weather_snapshot_id"
+            " WHERE r.plot_id = ? ORDER BY r.id DESC LIMIT 1",
+            (pid,)).fetchone()
+        leaf = conn.execute(
+            "SELECT class FROM leaf_assessments WHERE plot_id = ?"
+            " ORDER BY id DESC LIMIT 1", (pid,)).fetchone()
+    if obs is None:
+        return {"error": "no water observation yet for this plot"}
+    level_cm = float(obs["level_cm"])
+    stage_val = (rec["stage"] if rec is not None
                  else _stage_for_plot(plot))
-    disease = (vr["top_class"] if vr is not None and vr["top_class"]
+    disease = (leaf["class"] if leaf is not None and leaf["class"]
                else "none")
     if disease == "healthy":
         disease = "none"
-    rain72 = (float(decision["rain72_mm"])
-              if decision is not None and decision["rain72_mm"] is not None
+    rain72 = (float(rec["rain72_mm"])
+              if rec is not None and rec["rain72_mm"] is not None
               else 0.0)
     awd_state = awd_state_from(level_cm, stage_val)
     wet = rain72 >= _WET_WEATHER_MM

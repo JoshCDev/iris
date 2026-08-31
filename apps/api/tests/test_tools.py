@@ -7,6 +7,7 @@ import pytest
 from app import db
 from app.assistant import tools
 from app.db_l1 import (
+    insert_leaf_assessment,
     insert_recommendation,
     insert_water_observation,
     insert_weather_snapshot_row,
@@ -154,12 +155,11 @@ def test_get_risk_fusion_brown_spot_deep_dry_high(tmp_path):
     db.init_db(f"sqlite:///{(tmp_path / 'f.db').as_posix()}")
     pid = _seed_plot(level=-12.0, action="IRRIGATE")
     with db.session_scope() as conn:
-        conn.execute(
-            "INSERT INTO vision_reports (plot_id, ts, image_path, top_class,"
-            " confidence, severity, language, advisory_json, fusion_json,"
-            " is_demo) VALUES (?, ?, 'x.jpg', 'brown_spot', 0.9, 'moderate',"
-            " 'id', '{}', NULL, 0)",
-            (pid, datetime.now(timezone.utc).isoformat()))
+        insert_leaf_assessment(
+            conn, plot_id=pid, image_hash="x", retention_mode="operational",
+            model_version="rice-v1", guard_result="ok", class_="brown_spot",
+            confidence=0.9, severity="moderate",
+            created_at=datetime.now(timezone.utc).isoformat())
     out = tools.get_risk_fusion(pid)
     assert out["risk_level"] == "high"
     assert out["disease"] == "brown_spot"
