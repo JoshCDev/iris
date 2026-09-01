@@ -195,7 +195,7 @@ def test_scaled_mesocosm_trigger(client):
 
 # --- weather endpoint ---------------------------------------------------------
 
-def test_weather_fail_open_on_error(client, monkeypatch):
+def test_weather_reports_unavailable_on_error(client, monkeypatch):
     def boom(*args, **kwargs):
         raise RuntimeError("offline")
     monkeypatch.setattr(main_mod, "fetch_forecast_72h_rain", boom)
@@ -204,10 +204,12 @@ def test_weather_fail_open_on_error(client, monkeypatch):
     r = client.get("/api/weather/forecast")
     assert r.status_code == 200
     body = r.json()
-    assert body["rain72_mm"] == 0.0
+    # Fail closed: a missing forecast is never presented as 0 mm rain.
+    assert body["rain72_mm"] is None
+    assert body["availability"] == "unavailable"
     assert body["stale"] is True
     assert "hitl" in body
-    assert "needs_review" in body["hitl"]
+    assert body["hitl"]["needs_review"] is True
 
 
 def test_weather_caches_for_15_minutes(client, monkeypatch):
@@ -311,12 +313,18 @@ def test_demo_seed_requires_demo_mode(tmp_path, monkeypatch):
     monkeypatch.setenv("IRIS_DEMO_MODE", "0")
     monkeypatch.setenv("IRIS_DEVICE_TOKEN", "")
     cfg.reset_settings_cache()
-    main_mod.db.init_db(f"sqlite:///{(tmp_path / 't.db').as_posix()}")
-    r = TestClient(main_mod.app).post("/api/demo/seed")
-    assert r.status_code == 403
-    assert r.json()["detail"]["code"] == "demo_mode_required"
-    with db.session_scope() as conn:
-        assert db.count_rows(conn, "plots") == 0
+    try:
+        main_mod.db.init_db(f"sqlite:///{(tmp_path / 't.db').as_posix()}")
+        r = TestClient(main_mod.app).post("/api/demo/seed")
+        assert r.status_code == 403
+        assert r.json()["detail"]["code"] == "demo_mode_required"
+        with db.session_scope() as conn:
+            assert db.count_rows(conn, "plots") == 0
+    finally:
+        # Restore the ambient (demo) settings for later tests: request-time
+        # guards read the cached Settings object.
+        monkeypatch.undo()
+        cfg.reset_settings_cache()
 
 
 def test_ingest_pipe_zero_cm_on_autocreate(client):

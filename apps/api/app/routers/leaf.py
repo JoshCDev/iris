@@ -5,14 +5,16 @@ import asyncio
 import hashlib
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from app import db
 from app.db_l1 import insert_leaf_assessment
+from app.security import require_demo_interaction
 from app.vision.image_guard import ImageRejectedError
 
-router = APIRouter(prefix="/api/v1/plots", tags=["leaf"])
+router = APIRouter(prefix="/api/v1/plots", tags=["leaf"],
+                   dependencies=[Depends(require_demo_interaction)])
 
 
 def _utc_now_iso() -> str:

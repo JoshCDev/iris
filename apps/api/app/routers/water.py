@@ -5,7 +5,7 @@ import json
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -18,13 +18,15 @@ from app.db_l1 import (
 )
 from app.irrigation.protocol import stage_on
 from app.irrigation.scheduler import decide
+from app.security import require_demo_interaction
 from app.weather.snapshots import (
     capture_weather_snapshot,
     latest_weather_snapshot,
     weather_state_payload,
 )
 
-router = APIRouter(prefix="/api/v1/plots", tags=["water"])
+router = APIRouter(prefix="/api/v1/plots", tags=["water"],
+                   dependencies=[Depends(require_demo_interaction)])
 
 _WIB = timezone(timedelta(hours=7))  # noqa: F821 — see note below
 RULESET_VERSION = "safe-awd-v1"

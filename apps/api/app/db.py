@@ -134,8 +134,13 @@ class Database:
             from alembic.config import Config
         except ImportError:
             return  # tests without alembic installed fall back to schema only
-        cfg = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+        api_dir = Path(__file__).resolve().parents[1]
+        cfg = Config(str(api_dir / "alembic.ini"))
         cfg.set_main_option("sqlalchemy.url", self.url)
+        # Absolute script_location: the ini value resolves against the
+        # process cwd, which breaks seeding/uvicorn launched from the repo
+        # root instead of apps/api.
+        cfg.set_main_option("script_location", str(api_dir / "alembic"))
         command.upgrade(cfg, "head")
 
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app import db
@@ -12,8 +12,10 @@ from app.db_l1 import (
     insert_action_confirmation,
     recommendation_with_confirmations,
 )
+from app.security import require_demo_interaction
 
-router = APIRouter(prefix="/api/v1/recommendations", tags=["confirmations"])
+router = APIRouter(prefix="/api/v1/recommendations", tags=["confirmations"],
+                   dependencies=[Depends(require_demo_interaction)])
 
 
 class ConfirmationIn(BaseModel):

@@ -2,20 +2,19 @@ import asyncio
 import json
 import logging
 import os
-import secrets
 import time as _time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app import db
-from app.config import get_settings
+from app.config import get_settings, validate_config
 from app.fusion.risk import assess as fusion_assess
 from app.fusion.risk import awd_state_from as fusion_awd_state_from
 from app.fusion.risk import wet_weather_from_rain
@@ -36,6 +35,7 @@ from app.routers import health as health_router
 from app.routers import leaf as leaf_router
 from app.routers import plots as plots_router
 from app.routers import water as water_router
+from app.security import require_demo_interaction, require_device_token
 from app.vision.advisory import AdvisoryService
 from app.vision.crop_packs import RICE_SLUG, CropPackService
 from app.vision.image_guard import ImageGuardService, ImageRejectedError
@@ -125,29 +125,20 @@ def _ensure_vision_loaded() -> bool:
 
 @app.on_event("startup")
 def _startup_load_vision() -> None:
+    validate_config()
     if _ensure_vision_loaded():
         log.info("vision: rice ONNX model loaded")
 
 
-def require_token(
-    token: str | None = Header(default=None, alias="X-IRIS-Token"),
-) -> None:
-    expected = get_settings().iris_device_token
-    if not expected:
-        return
-    if token is None or not secrets.compare_digest(token, expected):
-        raise HTTPException(status_code=401, detail="bad token")
-
-
 class ReadingIn(BaseModel):
-    device_plot_name: str
+    device_plot_name: str = Field(min_length=1, max_length=80)
     dist_cm: float
     batt_v: float | None = None
     pipe_zero_cm: float | None = None
 
 
 class PlotPatch(BaseModel):
-    bmkg_adm4: str
+    bmkg_adm4: str = Field(min_length=1, max_length=32)
 
 
 def _status_payload(conn, plot) -> dict[str, Any]:
@@ -178,7 +169,7 @@ def _status_payload(conn, plot) -> dict[str, Any]:
 
 
 @app.post("/api/ingest", status_code=201)
-def post_reading(body: ReadingIn, _: None = Depends(require_token)):
+def post_reading(body: ReadingIn, _: None = Depends(require_device_token)):
     today = _wib_today()
     with db.session_scope() as conn:
         plot = db.get_plot_by_name(conn, body.device_plot_name)
@@ -203,21 +194,25 @@ def post_reading(body: ReadingIn, _: None = Depends(require_token)):
                           batt_v=body.batt_v)
         stage = stage_on(_stage_days(
             date.fromisoformat(plot["transplant_date"]), today))
+        weather_ok = True
         try:
             rain = fetch_forecast_72h_rain(plot=plot)
         except Exception:
-            log.warning("weather fetch failed; using rain72_mm=0.0")
+            log.warning("weather fetch failed; marking forecast unavailable")
+            weather_ok = False
             rain = 0.0
         eff_level = level
         if plot["scaled"]:
             trig = trigger_level_cm(stage)
             if trig is not None and trig < 0:
                 eff_level = level * 3.0
-        dec = decide(eff_level, stage, rain)
+        dec = decide(eff_level, stage, rain,
+                     weather_availability="fresh" if weather_ok
+                     else "unavailable")
         db.insert_decision(conn, plot_id=int(plot["id"]), ts=ts,
                            stage=stage.value, level_cm=level,
                            action=dec.action, reason_id=dec.reason_id,
-                           rain72_mm=rain)
+                           rain72_mm=rain if weather_ok else None)
         if dec.action == "IRRIGATE":
             deficit_cm = max(0.0, (dec.refill_to_cm or REFILL_CM) - level)
             if deficit_cm > 0:
@@ -228,7 +223,7 @@ def post_reading(body: ReadingIn, _: None = Depends(require_token)):
 
 
 @app.get("/api/plots/{plot_id}/status")
-def plot_status(plot_id: int):
+def plot_status(plot_id: int, _: None = Depends(require_demo_interaction)):
     with db.session_scope() as conn:
         plot = db.get_plot(conn, plot_id)
         if plot is None:
@@ -237,7 +232,8 @@ def plot_status(plot_id: int):
 
 
 @app.get("/api/plots/{plot_id}/history")
-def plot_history(plot_id: int, days: int = 7):
+def plot_history(plot_id: int, days: int = 7,
+                 _: None = Depends(require_demo_interaction)):
     if days <= 0 or days > 366:
         raise HTTPException(status_code=422, detail="days must be 1..366")
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
@@ -266,7 +262,8 @@ def plot_history(plot_id: int, days: int = 7):
 
 
 @app.get("/api/plots/{plot_id}/receipt")
-def plot_receipt(plot_id: int, season_days: int = 100, claim: str = "e3"):
+def plot_receipt(plot_id: int, season_days: int = 100, claim: str = "e3",
+                 _: None = Depends(require_demo_interaction)):
     if season_days <= 0 or season_days > 366:
         raise HTTPException(status_code=422, detail="season_days must be positive")
     if claim not in ("e3", "plot"):
@@ -304,7 +301,8 @@ def _adm4_for_plot(plot_id: int | None) -> str:
 
 
 @app.get("/api/weather/forecast")
-def weather_forecast(plot_id: int | None = None):
+def weather_forecast(plot_id: int | None = None,
+                     _: None = Depends(require_demo_interaction)):
     adm4 = _adm4_for_plot(plot_id)
     now = _time.time()
     entry = _weather_cache.get(adm4)
@@ -315,9 +313,13 @@ def weather_forecast(plot_id: int | None = None):
     try:
         rain = fetch_forecast_72h_rain(adm4=adm4)
     except Exception:
-        log.warning("weather fetch failed; failing open")
-        cached = entry["value"] if entry is not None else 0.0
-        return weather_payload(cached, True)
+        log.warning("weather fetch failed; reporting unavailable")
+        # Fail closed: never present a missing forecast as 0 mm rain.
+        return {"source": "BMKG", "adm4": adm4,
+                "availability": "unavailable", "rain72_mm": None,
+                "stale": True,
+                "hitl": {"needs_review": True,
+                         "reason": "weather_unavailable"}}
     payload = weather_payload(rain, False)
     _weather_cache[adm4] = {"ts": now, "value": rain, "payload": payload}
     return payload
@@ -332,7 +334,8 @@ def weather_areas(q: str = "", limit: int = 20):
 
 
 @app.patch("/api/plots/{plot_id}")
-def patch_plot(plot_id: int, body: PlotPatch):
+def patch_plot(plot_id: int, body: PlotPatch,
+               _: None = Depends(require_demo_interaction)):
     code = body.bmkg_adm4.strip()
     with db.session_scope() as conn:
         plot = db.get_plot(conn, plot_id)
@@ -369,6 +372,7 @@ async def vision_predict(
     image: UploadFile = File(...),
     plot_id: int | None = Form(default=None),
     language: str = Form(default="en"),
+    _: None = Depends(require_demo_interaction),
 ):
     language = "en" if language == "en" else "id"
     if not _ensure_vision_loaded():
@@ -466,7 +470,7 @@ async def vision_predict(
 
 
 @app.get("/api/vision/reports")
-def vision_reports_list():
+def vision_reports_list(_: None = Depends(require_demo_interaction)):
     with db.session_scope() as conn:
         rows = conn.execute(
             "SELECT * FROM vision_reports ORDER BY id DESC LIMIT 20"
@@ -518,29 +522,22 @@ def health():
 
 class ChatMessageIn(BaseModel):
     role: Literal["user", "assistant"]
-    content: str
+    content: str = Field(min_length=1, max_length=8000)
     image_ref: str | None = None
 
 
 class ChatIn(BaseModel):
-    session_id: str
-    messages: list[ChatMessageIn]
+    session_id: str = Field(min_length=1, max_length=64,
+                            pattern=r"^[A-Za-z0-9_-]+$")
+    messages: list[ChatMessageIn] = Field(min_length=1, max_length=40)
 
 
 @app.post("/api/assistant/chat")
-def assistant_chat(body: ChatIn):
+def assistant_chat(body: ChatIn,
+                   _: None = Depends(require_demo_interaction)):
     from app.assistant.agent import chat as agent_chat
     from app.assistant.tools import register_image_dataref
 
-    if len(body.messages) > 40:
-        raise HTTPException(status_code=422,
-                            detail={"code": "chat_too_many_messages",
-                                    "message": "too many messages"})
-    for m in body.messages:
-        if len(m.content) > 8000:
-            raise HTTPException(status_code=422,
-                                detail={"code": "chat_message_too_long",
-                                        "message": "message too long"})
     msgs: list[dict[str, Any]] = []
     for m in body.messages:
         item: dict[str, Any] = {"role": m.role, "content": m.content}

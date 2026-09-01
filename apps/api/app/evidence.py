@@ -27,24 +27,30 @@ def _rice_model_version() -> str:
 
 def e3_evidence_payload() -> dict[str, Any]:
     data = json.loads(E3_SUMMARY_PATH.read_text(encoding="utf-8"))
+    cf = data["continuous_flooding"]
+    e3 = data["iris_e3"]
+    water_saved_pct = round(
+        (1.0 - float(e3["water_m3_ha_season"])
+         / float(cf["water_m3_ha_season"])) * 100.0, 2)
     return {
         "evidence_type": "simulated",
         "label": "DEFINED SIMULATION",
         "title": "IRIS defined scheduler simulation (E3)",
         "assumptions": {
-            "season_days": 100,
-            "area_ha": 1.0,
-            "rain_mm": 0,
-            "drawdown_cm_per_day": 0.8,
+            "season_days": int(data["scenario"]["season_days"]),
+            "area_ha": float(data["scenario"]["area_ha"]),
+            "rain_mm": float(data["scenario"]["rain_mm"]),
+            "drawdown_cm_per_day": float(
+                data["scenario"]["drawdown_cm_per_day"]),
         },
         "values": {
-            "water_cf_m3": float(data["water_cf_m3"]),
-            "water_awd_m3": float(data["water_awd_m3"]),
-            "water_saved_pct": float(data["water_saved_pct"]),
-            "flooded_days_awd": int(data["flooded_days_awd"]),
-            "ch4_cf_kg": float(data["ch4_cf_kg"]),
-            "ch4_awd_kg": float(data["ch4_awd_kg"]),
-            "co2e_saved_t": float(data["co2e_saved_t"]),
+            "water_cf_m3": float(cf["water_m3_ha_season"]),
+            "water_awd_m3": float(e3["water_m3_ha_season"]),
+            "water_saved_pct": water_saved_pct,
+            "flooded_days_awd": int(e3["flooded_days"]),
+            "ch4_cf_kg": float(cf["ch4_kg_ha_season"]),
+            "ch4_awd_kg": float(e3["ch4_kg_ha_season"]),
+            "co2e_saved_t": float(e3["ch4_only_avoided_co2e_t_ha_season"]),
         },
         "disclosures": [
             "The -15 cm refill trigger did not activate in vegetative or "

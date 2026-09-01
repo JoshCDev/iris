@@ -1,8 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app import db
+from app.security import require_demo_interaction
 
-router = APIRouter(prefix="/api/v1/plots", tags=["plots"])
+router = APIRouter(prefix="/api/v1/plots", tags=["plots"],
+                   dependencies=[Depends(require_demo_interaction)])
 
 
 @router.get("")

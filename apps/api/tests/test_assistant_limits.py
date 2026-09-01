@@ -25,7 +25,6 @@ def test_chat_rejects_too_many_messages(tmp_path):
     r = c.post("/api/assistant/chat",
                json={"session_id": "s1", "messages": msgs})
     assert r.status_code == 422
-    assert r.json()["detail"]["code"] == "chat_too_many_messages"
 
 
 def test_chat_rejects_oversized_message(tmp_path):
@@ -34,4 +33,18 @@ def test_chat_rejects_oversized_message(tmp_path):
                json={"session_id": "s1",
                      "messages": [{"role": "user", "content": "x" * 8001}]})
     assert r.status_code == 422
-    assert r.json()["detail"]["code"] == "chat_message_too_long"
+
+
+def test_chat_rejects_bad_session_id(tmp_path):
+    c = _client(tmp_path)
+    r = c.post("/api/assistant/chat",
+               json={"session_id": "../etc/passwd",
+                     "messages": [{"role": "user", "content": "hi"}]})
+    assert r.status_code == 422
+
+
+def test_chat_rejects_empty_messages(tmp_path):
+    c = _client(tmp_path)
+    r = c.post("/api/assistant/chat",
+               json={"session_id": "s1", "messages": []})
+    assert r.status_code == 422

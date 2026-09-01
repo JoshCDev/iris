@@ -56,11 +56,11 @@ def build_e3_receipt(plot_name: str) -> GreenReceipt:
     data = load_e3_summary()
     return build_receipt(
         plot_name=plot_name,
-        season_days=int(data["days"]),
-        flooded_days=int(data["flooded_days_awd"]),
-        water_baseline_m3=float(data["water_cf_m3"]),
-        water_actual_m3=float(data["water_awd_m3"]),
-        area_ha=1.0,
+        season_days=int(data["scenario"]["season_days"]),
+        flooded_days=int(data["iris_e3"]["flooded_days"]),
+        water_baseline_m3=float(data["continuous_flooding"]["water_m3_ha_season"]),
+        water_actual_m3=float(data["iris_e3"]["water_m3_ha_season"]),
+        area_ha=float(data["scenario"]["area_ha"]),
         label="simulated",
     )
 
