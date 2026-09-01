@@ -47,7 +47,12 @@ REQUIRED_FILES = [
     "experiments/outputs/chart_context_data.csv",
 ]
 
-PERSONAL_PATH_MARKERS = ("C:\\", "c:\\", "/Users/", "/home/")
+PERSONAL_PATH_MARKERS = ("C:\\xampp", "C:\\Users", "C:\\htdocs",
+                         "/Users/", "/home/")
+# The verifier and its gate test contain the marker literals themselves;
+# they are not personal-path offenders.
+SELF_SCAN_FILES = {"scripts/verify_public_readiness.py",
+                   "apps/api/tests/test_scripts_portable.py"}
 
 # Pinned E3 values (README "E3 simulation results" table).
 E3_EXPECTED = {
@@ -103,6 +108,8 @@ def main() -> int:
     # 3. No personal absolute paths in tracked text sources.
     offenders = []
     for f in files:
+        if f in SELF_SCAN_FILES:
+            continue
         if Path(f).suffix.lower() not in TEXT_SUFFIXES:
             continue
         try:

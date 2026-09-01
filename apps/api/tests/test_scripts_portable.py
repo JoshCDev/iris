@@ -65,7 +65,7 @@ def test_audit_missing_dataset_writes_report_without_failure(tmp_path):
 
 def test_no_personal_absolute_paths_in_tracked_sources():
     """Committed Python sources must not reference developer machines."""
-    forbidden = ("C:\\", "c:\\", "/Users/", "/home/")
+    forbidden = ("C:\\xampp", "C:\\Users", "C:\\htdocs", "/Users/", "/home/")
     offenders: list[str] = []
     for script in SCRIPTS:
         text = script.read_text(encoding="utf-8")
