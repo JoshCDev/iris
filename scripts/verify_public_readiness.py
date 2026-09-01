@@ -40,9 +40,7 @@ REQUIRED_FILES = [
     "THIRD_PARTY_NOTICES.md",
     "apps/api/crop_packs/rice/model.onnx",
     "assets/poster/chart_results.png",
-    "assets/poster/chart_results.svg",
     "assets/poster/chart_water_trace.png",
-    "assets/poster/chart_water_trace.svg",
     "experiments/outputs/backtest_summary.json",
     "experiments/outputs/chart_context_data.csv",
 ]

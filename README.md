@@ -1,10 +1,12 @@
 # IRIS — Intelligent Rice Integrated System
 
-IRIS is a farmer-centred research prototype that brings water-level sensing,
-rain-aware safe alternate wetting and drying (AWD), rice-leaf image screening,
-and plot-specific explanations into one Web application. It recommends; the
-farmer or extension officer reviews and decides. IRIS does **not** actuate a
-pump, diagnose disease, prescribe pesticide doses, or replace local agronomic
+Rain-aware AWD, canopy-anomaly triage, and a plot assistant - on one plot
+
+IRIS is designed to connect IoT-assisted water sensing, safe-AWD guidance,
+rice-leaf screening, and plot-specific explanations in one farmer-controlled
+workflow. The current prototype uses demo data; IRIS recommends, and the
+farmer or extension officer decides. IRIS does **not** actuate a pump,
+diagnose disease, prescribe pesticide doses, or replace local agronomic
 advice.
 
 The project is developed by Joshua Christopher Gunawan, Archangela Sheilla
@@ -23,47 +25,77 @@ Universitas Kristen Maranatha.
 | --- | --- | --- |
 | Web application | Working FastAPI + Next.js prototype and deterministic 30-day demo | Production authentication, multi-farm tenancy, and operational usability |
 | IoT water pathway | Sensor-ingest API, level conversion, stage rules, BMKG context, and human confirmation records | Field node calibration, reliability, and farmer trials |
-| Water and CH4 evidence | Reproducible 100-day, 1 ha, zero-rain E3 simulation | Measured water use, yield, CH4, or N2O |
+| Water and CH₄ evidence | Reproducible 100-day, 1 ha, zero-rain E3 simulation | Measured water use, yield, CH₄, or N₂O |
 | Leaf screening | Five-class MobileNetV3-Large ONNX model; held-out public-dataset accuracy 0.9784 and macro-F1 0.9783 (`n = 1,621`) | Independent Indonesian field-leaf validation and laboratory diagnosis |
 | Rain second opinion | Exploratory logistic regression for a review flag | Held-out predictive validity; it never controls irrigation |
 
 These labels are deliberate: **working prototype**, **simulated**,
 **modelled**, **public-dataset benchmark**, and **field validation pending**.
 
-## How IRIS works
+## Problem
 
-1. **Sense and observe.** An IoT field sensor can send water level to IRIS;
-   the farmer confirms plot context and adds a leaf photograph when needed.
-2. **Add weather context.** IRIS retrieves BMKG's official 72-hour forecast.
-   A forecast total of at least 15 mm activates an IRIS project rain-hold rule;
-   the threshold is not a BMKG recommendation [R12].
-3. **Analyse safely.** Stage rules protect establishment and flowering and
-   apply safe AWD during vegetative and grain-fill stages [R3]. A
-   MobileNetV3-Large model screens five leaf classes [R9].
-4. **Combine and explain.** Explicit rules combine water, weather, and leaf
-   signals. The assistant explains the same stored plot record and falls back
-   to the local knowledge base when the configured language-model service is
-   unavailable.
-5. **Review uncertainty.** The interface exposes stale data, low-confidence
-   images, weather disagreement, evidence labels, and the reason behind each
-   recommendation.
-6. **Decide and act.** A farmer or extension officer accepts, defers, declines,
-   or corrects the recommendation. IRIS records that response but does not
-   operate field hardware.
+**The National Water Challenge**
 
-### Decision safeguards
+Indonesia harvested 10.05 million hectares of paddy and produced 53.14
+million tonnes of dry unhusked paddy in 2024 [R1], making rice water
+management a national sustainability concern.
 
-- BMKG is the scheduler's weather source. The exploratory rain logistic
-  regression is only a second-opinion review flag and never withholds water.
-- Rain hold does not override the dry hard floor and does not apply during
-  establishment or flowering.
-- Shallow ponding recedes naturally. At excessive ponding (at least +15 cm),
-  IRIS advises lowering toward +5 cm only when drainage is available; harvest
-  is the only drain-to-dry stage.
-- Leaf output is image triage, not a causal or laboratory diagnosis. The
-  application gives no pesticide product or dose.
-- The combined concern level comes from an inspectable rule table, not an
-  unreported end-to-end fusion model.
+**The Evidence-Based Opportunity**
+
+IRRI's safe AWD protocol lets the field water table fall to −15 cm before
+refilling to about +5 cm and protects the flowering flood [R3]; field
+evidence shows that AWD can reduce irrigation and CH₄ while maintaining
+yield, although N₂O may rise [R4], [R5], [R6].
+
+**Research Objective**
+
+Farmers still read field tubes and inspect leaves as separate tasks; IRIS
+tests whether one WebApp can unite those observations, recommendations, and
+human review on the same plot.
+
+## Approach and methods
+
+IRIS is designed to connect IoT-assisted water sensing, safe-AWD guidance,
+rice-leaf screening, and plot-specific explanations in one farmer-controlled
+workflow. The current prototype uses demo data; IRIS recommends, and the
+farmer or extension officer decides.
+
+### Farmer journey
+
+1. **SENSE + OBSERVE.** An IoT field sensor sends the water level to IRIS;
+   the farmer confirms crop stage and adds a leaf photo when needed.
+2. **ADD CONTEXT.** IRIS retrieves the official BMKG 72-hour forecast and
+   applies its ≥15 mm project rain-hold rule; BMKG alone enters the scheduler
+   [R12].
+3. **ANALYSE.** Stage rules protect establishment and flowering and apply
+   safe AWD during vegetative and grain-fill stages; MobileNetV3-Large
+   screens five leaf classes [R3], [R9].
+4. **COMBINE + EXPLAIN.** Rules combine water, weather, and leaf signals;
+   the assistant explains the same plot record and uses the knowledge base as
+   fallback.
+5. **REVIEW.** The farmer or extension officer checks the recommendation and
+   uncertainty flags.
+6. **ACT.** The farmer decides and acts; IRIS never controls a pump or
+   prescribes pesticide doses.
+
+### Evaluation
+
+- **DEFINED WATER + CH₄ SCENARIO:** A 100-day, 1 ha, zero-rain simulation
+  uses 0.8 cm day⁻¹ drawdown and stage-aware refill to +5 cm. CH₄ follows
+  IPCC Tier 1 with a declared project SF_w interpolation and GWP100 = 27;
+  the run excludes live rain-hold, N₂O, and field measurements
+  [R2], [R6], [R7].
+- **PUBLIC-DATASET LEAF TEST:** The classifier uses Sethy and Paddy Doctor
+  images [R10], [R11], [R13]. The held-out split provides public-dataset
+  evidence; its raw manifest is absent, and Indonesian field leaves remain
+  untested.
+- **SECONDARY RAIN REVIEW:** Logistic regression uses Open-Meteo rain for
+  Salatiga (2018–2026; *n* = 3,154) without a held-out test. It only flags
+  disagreement or uncertainty for review; BMKG remains the scheduler input
+  [R12], [R14].
+
+**FIELD VALIDATION PENDING:** sensor calibration, water use, yield,
+emissions, usability, and Indonesian leaf performance.
 
 ## Architecture
 
@@ -84,64 +116,153 @@ flowchart LR
 | API | FastAPI, Pydantic, SQLite | Ingest, validation, safe-AWD rules, weather snapshots, evidence, and confirmations |
 | Vision | ONNX Runtime, MobileNetV3-Large | Quality guard and five-class rice-leaf screening |
 | Assistant | DeepSeek-compatible chat client + TF-IDF fallback | Explain stored plot context; tools remain bounded and traceable |
-| Evidence | Python backtest and checked JSON outputs | Reproduce the E3 scenario and its poster figures |
+| Evidence | Python backtest and checked JSON outputs | Reproduce the E3 scenario behind the poster figures |
 
 The optional live assistant uses DeepSeek's OpenAI-compatible API and its
 experimental `deepseek-v4-flash-vision-exp` model. Without an API key, IRIS
 uses local retrieval and labels the response as offline.
 
-## E3 simulation results
+## Results
+
+**Headline:** −37.5% irrigation water (8,000 → 5,000 m³ ha⁻¹ season⁻¹).
+Modelled CH₄ −10.8%, or 0.3784 t CO₂e ha⁻¹ season⁻¹. Project simulation,
+100 days, 1 ha, 0 mm rain.
 
 The defined E3 scenario runs for 100 days on 1 ha with 0 mm rain and
-0.8 cm day^-1 drawdown. Drawdown is halved below 0 cm. The backtest uses crop
-stage triggers and refill to +5 cm; it does not apply the live rain-hold rule.
+0.8 cm day⁻¹ drawdown. Drawdown is halved below 0 cm. The backtest uses crop
+stage triggers and refill to +5 cm; it does not apply the live rain-hold
+rule.
 
-| Metric | Continuous flooding | IRIS E3 | Difference |
-| --- | ---: | ---: | ---: |
-| Irrigation water | 8,000 m3 ha^-1 season^-1 | 5,000 m3 ha^-1 season^-1 | -37.5% |
-| Flooded days | 100 | 51 | -49 days |
-| Modelled CH4 | 130.00 kg ha^-1 season^-1 | 115.99 kg ha^-1 season^-1 | -10.8% |
-| Modelled CO2e avoided | — | 0.3784 t ha^-1 season^-1 | CH4 only |
+| Metric                                  | Continuous flooding | This run (sim.) |
+| --------------------------------------- | ------------------- | --------------- |
+| Irrigation water (m³ ha⁻¹ season⁻¹)     | 8,000               | 5,000           |
+| Flooded days                            | 100                 | 51              |
+| Modelled CH₄ (kg ha⁻¹ season⁻¹)         | 130.00              | 115.99          |
+| Modelled CO₂e avoided (t ha⁻¹ season⁻¹) | -                   | 0.3784          |
+| Model irrigation events                 | 100\*               | 23\*            |
 
-![IRIS E3 simulated seasonal results](assets/poster/chart_results.png)
+\*Daily water-balance top-ups at 0.8 cm day⁻¹, not 100 farmer visits. The 23
+IRIS events are 14 establishment plus 9 flowering top-ups. The −15 cm trigger
+never fired during the vegetative or grain-fill stages. The minimum level was
+−14.6 cm immediately before the first flowering top-up; the minimum
+end-of-day level was −14.2 cm (Fig. 1).
+
+**Fig. 1.** Water-table trace for the 100-day project simulation (0 mm rain),
+including pre-refill and end-of-day states. Triangles mark model top-ups, and
+the yellow band marks the flowering flood. The dashed −15 cm line is the
+safe-AWD trigger [R3]; it did not trigger a vegetative or grain-fill refill.
 
 ![IRIS E3 water-table trace](assets/poster/chart_water_trace.png)
 
-The methane calculation follows the IPCC 2006 Tier 1 structure
-`1.30 x SF_w x t x A` with `SF_p = SF_o = 1` [R7]. IRIS obtains
-`SF_w = 0.8922` by linearly interpolating the 2006 continuous-flooding factor
-1.00 and aggregate multiple-aeration factor 0.78 using the simulated flooded-day
-fraction. **That interpolation is a project assumption, not an IPCC equation.**
-The 2019 Refinement gives `SF_w = 0.55` for multiple drainage [R8], but E3 does
-not substitute that factor. CO2e uses non-fossil CH4 GWP100 = 27 [R2]. Because
-N2O is omitted, avoided CO2e is an upper bound on net climate benefit where AWD
-raises N2O [R6]. See [IPCC accounting](docs/IPCC_ACCOUNTING.md).
+**Fig. 2.** Seasonal irrigation volume and modelled CH₄. The unrounded CH₄
+difference is 14.014 kg ha⁻¹; CO₂e = 14.014 × 27 / 1000 = 0.3784 t ha⁻¹
+season⁻¹ [R2], [R7]. N₂O is omitted.
 
-Field literature provides context, not validation of E3:
+![IRIS E3 simulated seasonal results](assets/poster/chart_results.png)
 
-| Outcome vs continuous flooding | IRIS E3 | Field-literature context |
-| --- | --- | --- |
-| Irrigation water | -37.5% `[simulated]` | Mild AWD -23.4% [R5]; Asian adoption up to -38% [R4] |
-| CH4 | -10.8% `[modelled]` | Overall AWD -51.6% [R6] |
-| Climate scope | CH4 only; N2O omitted | Combined CH4+N2O GWP -46.9%, with N2O +44.0% [R6] |
+For the committed public-dataset split, the served model reports held-out
+test accuracy of 0.9784 (*n* = 1,621; macro-F1 0.9783). The raw split is
+absent from the repository, and Indonesian field leaves have not been
+evaluated.
 
-Do not convert the literature percentages into IRIS absolute units or present
-them as a field validation of this software.
+### Methane model and assumptions
+
+The CH₄ scenario uses `1.30 × SF_w × t × A`, assumes `SF_p = SF_o = 1`, and
+obtains effective `SF_w = 0.8922` by interpolating continuous flooding `1.00`
+and the 2006 aggregate irrigated factor `0.78` from 51 flooded days. IPCC
+does not prescribe that interpolation. The 2019 Refinement gives
+`SF_w = 0.55` for multiple drainage [R8], but this project run does not
+substitute that factor. GWP100 is 27, and omitting N₂O makes avoided CO₂e an
+upper bound. See [IPCC accounting](docs/IPCC_ACCOUNTING.md).
+
+### Field literature - different studies and conditions; context, not validation of IRIS E3
+
+| Outcome vs continuous flooding | IRIS E3               | Field-literature context                           |
+| ------------------------------ | --------------------- | -------------------------------------------------- |
+| Irrigation water               | −37.5% `[simulated]`  | Mild AWD −23.4% [R5]; Asian adoption up to −38% [R4] |
+| CH₄                            | −10.8% `[modelled]`   | Overall AWD −51.6% [R6]                             |
+| Climate scope                  | CH₄ only; N₂O omitted | Combined CH₄+N₂O GWP −46.9%, with N₂O +44.0% [R6]   |
+
+Present the literature values only as percentages versus continuous
+flooding; do not convert them to IRIS absolute units, and do not present them
+as a field validation of this software.
 
 ## Leaf-model evidence
 
 The current ONNX model screens bacterial leaf blight, blast, brown spot,
-healthy, and tungro. It was trained from Sethy's CC BY 4.0 rice-leaf dataset
-[R10, R11] and selected classes from the publicly accessible Paddy Doctor
-dataset [R13]. The reported held-out score is accuracy 0.9784 and macro-F1
-0.9783 on 1,621 images. The committed model card records the split counts,
-preprocessing, known earlier leakage, and domain limitations.
+healthy, and tungro. The classifier uses Sethy and Paddy Doctor images
+[R10], [R11], [R13]. The held-out split provides public-dataset evidence;
+its raw manifest is absent, and Indonesian field leaves remain untested. The
+committed model card records the split counts, preprocessing, known earlier
+leakage, and domain limitations.
 
 The raw images and exact split manifest are not committed, so the reported
 split cannot be independently reconstructed from this repository alone.
 Paddy Doctor's public mirror does not state a reuse license; see
 [third-party notices](THIRD_PARTY_NOTICES.md) before redistributing derived
-weights or assets. Indonesian field leaves have not been evaluated.
+weights or assets.
+
+## Prototype
+
+**WORKING PROTOTYPE - DEMO DATA:** The WebApp links irrigation guidance,
+leaf screening, and plot-specific explanations on Sawah Demo - Salatiga. Its
+30-day walkthrough is synthetic and separate from the 100-day evidence run.
+The prototype stores computed outputs and the farmer's confirmation of each
+recommendation.
+
+## Implications
+
+On one hectare the simulation saves 3,000 m³ of irrigation water per season
+(−37.5%) and reduces modelled CH₄ by 10.8%. The Fig. 2 literature strip
+places those project results beside field evidence without treating different
+studies, units, or conditions as one experiment. The comparison is
+contextual, not a validation. What is available now is working software and a
+repeatable calculation; field measurements have not been made.
+
+## Conclusion
+
+IRIS does not replace IRRI's safe-AWD protocol [R3]. It puts that protocol,
+canopy-anomaly triage, and a plot assistant on the same plot, with a person
+in the loop. Its water and CH₄ figures are project simulations; the CH₄
+scenario uses the IPCC Tier 1 equation plus a clearly stated project
+interpolation [R7]. Field sensors, chamber CH₄ measurements, yield
+measurements, and Indonesian leaf-image tests have not been carried out.
+
+## Technical notes
+
+Accuracy notes retained from the poster copy; use them to check claims
+against the figures above.
+
+- Irrigation follows establishment, vegetative AWD, flowering flood, grain
+  fill, and harvest. The ≥15 mm rain-hold threshold is an IRIS project rule,
+  not a BMKG recommendation. Rain hold never applies during establishment or
+  flowering and never overrides the dry hard floor (trigger minus 10 cm).
+- The scheduler leaves shallow ponding to recede naturally. At or above
+  +15 cm it advises lowering water toward +5 cm if drainage exists; only
+  harvest uses drain-to-dry advice.
+- An IoT/sensor ingest API exists, but the team has not field-tested the node
+  hardware, calibration, or mesocosm protocol.
+- The leaf pathway runs five classes on CPU, rejects some low-confidence
+  photographs, and combines outputs through explicit rules rather than an
+  end-to-end fusion model. The photo class alone is not the combined anomaly
+  signal.
+- The assistant reads the same plot record, responds in the user's language,
+  and uses the knowledge base when the language-model endpoint fails. It
+  never recommends pesticide doses.
+- The rain logistic regression predicts whether three-day rainfall reaches
+  15 mm. It achieved 0.5891 in-sample accuracy versus a 0.5022 wet base rate,
+  has no held-out test, and flags review when it disagrees with BMKG or
+  scores 0.35–0.65. It never withholds irrigation.
+- The CH₄ scenario uses `1.30 × SF_w × t × A`, assumes `SF_p = SF_o = 1`, and
+  obtains effective `SF_w = 0.8922` by interpolating continuous flooding
+  `1.00` and the 2006 aggregate irrigated factor `0.78` from 51 flooded days.
+  IPCC does not prescribe that interpolation. The 2019 Refinement gives
+  `SF_w = 0.55` for multiple drainage [R8], but this project run does not
+  substitute that factor. GWP100 is 27, and omitting N₂O makes avoided CO₂e
+  an upper bound.
+- The 30-day demo plot and the 100-day evidence run are separate. The
+  emission sheet reports the evidence run, not the demo window or the leaf
+  class.
 
 ## Run locally
 
@@ -176,23 +297,23 @@ evidence run.
 never commit `.env`. See [deployment guidance](docs/DEPLOYMENT_GUIDE.md) for
 configuration and health checks.
 
-## Reproduce the evidence charts
+## Evidence reproducibility
 
-The E3 numbers in this README and the two poster charts are generated from
-committed inputs, not hand-typed:
+The E3 numbers quoted in this README are generated from committed inputs,
+not hand-typed:
 
 ```bash
-python -m pip install -r experiments/requirements.txt
-python experiments/run_all.py                 # reruns the E3 backtest
-python experiments/generate_poster_charts.py  # writes assets/poster/*.svg + *.png
-python experiments/generate_poster_charts.py --check   # fails if outputs drift
+python experiments/run_all.py   # reruns the E3 backtest and rewrites the summary
 ```
 
 `experiments/outputs/backtest_summary.json` holds the machine-readable E3
-result and `experiments/outputs/chart_context_data.csv` the cited
-field-literature context. See [METHODOLOGY](docs/METHODOLOGY.md) for the
-scenario assumptions and [IPCC accounting](docs/IPCC_ACCOUNTING.md) for the
-methane model.
+result served by the API evidence endpoints, and
+`experiments/outputs/chart_context_data.csv` preserves the cited
+field-literature values behind the comparison table. The two figures above
+are the exported chart images printed on the submitted poster
+(`assets/poster/chart_water_trace.png`, `assets/poster/chart_results.png`).
+See [METHODOLOGY](docs/METHODOLOGY.md) for the scenario assumptions and
+[IPCC accounting](docs/IPCC_ACCOUNTING.md) for the methane model.
 
 ## Tests
 
@@ -227,7 +348,7 @@ model. See [SECURITY.md](SECURITY.md).
 | `apps/api/` | FastAPI service, scheduler, vision runtime, assistant, migrations, and tests |
 | `apps/web/` | Next.js interface and frontend tests |
 | `experiments/` | Backtest, model-training/evaluation code, and outputs |
-| `assets/poster/` | Public evidence charts, not the submitted poster package |
+| `assets/poster/` | The two evidence charts printed on the submitted poster (Fig. 1 and Fig. 2) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Detailed components and data flow |
 | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) | E1-E4 protocols and evidence labels |
 | [docs/IPCC_ACCOUNTING.md](docs/IPCC_ACCOUNTING.md) | Tier 1 assumptions and caveats |
