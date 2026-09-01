@@ -37,6 +37,14 @@ docs/citation-verification-*.md
 docs/competition/guidebook_extracted.txt
 reference/
 
+# Local audit and public-readiness delivery artifacts
+/.local-audit/
+/IRIS-public-readiness-*.zip
+
+# Submission/design working files maintained outside the public software tree
+/docs/poster-content.md
+/docs/competition/
+
 # OS / editors
 .DS_Store
 Thumbs.db
