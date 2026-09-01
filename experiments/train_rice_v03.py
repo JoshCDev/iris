@@ -2,8 +2,12 @@
 
 Subcommands: prepare | train | export
 
-Uses the mango-ml CUDA venv if invoked with that interpreter:
-  C:\\xampp\\htdocs\\mango_detector\\mango-ml\\.venv\\Scripts\\python.exe experiments\\train_rice_v03.py prepare
+External datasets are passed explicitly; nothing falls back to a developer's
+personal directory. Example:
+
+  python experiments/train_rice_v03.py prepare \\
+      --mendeley-root /path/to/processed/rice \\
+      --work-dir experiments/data/rice_v03
 """
 from __future__ import annotations
 
@@ -19,11 +23,8 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-PHYTO = Path(r"C:\xampp\htdocs\phytosignal")
-MENDELEY = PHYTO / "data" / "processed" / "rice"
 DATA = ROOT / "experiments" / "data"
 PADDY_RAW = DATA / "paddy_hf"
-SPLITS = DATA / "rice_v03"
 CKPT_DIR = ROOT / "experiments" / "outputs" / "rice_v03"
 PACK = ROOT / "apps" / "api" / "crop_packs" / "rice"
 
@@ -61,8 +62,13 @@ def _iter_images(root: Path):
             yield path
 
 
-def cmd_prepare(seed: int = 42) -> None:
+def cmd_prepare(mendeley_root: Path, work_dir: Path, seed: int = 42) -> None:
     import os
+    if not mendeley_root.is_dir():
+        raise SystemExit(
+            f"mendeley root not found: {mendeley_root}\n"
+            "Pass --mendeley-root pointing at the processed 'rice' directory "
+            "(train/val/test subfolders).")
     os.environ.setdefault("HF_HOME", str(DATA / "hf_cache"))
     PADDY_RAW.mkdir(parents=True, exist_ok=True)
     paddy_images = PADDY_RAW / "images"
@@ -92,7 +98,7 @@ def cmd_prepare(seed: int = 42) -> None:
     records: dict[str, dict[str, Path | str]] = {}
     for cls in ("bacterial_leaf_blight", "blast", "brown_spot", "tungro"):
         for split in ("train", "val", "test"):
-            folder = MENDELEY / split / cls
+            folder = mendeley_root / split / cls
             for path in _iter_images(folder):
                 digest = _md5_file(path)
                 if digest not in records:
@@ -112,8 +118,8 @@ def cmd_prepare(seed: int = 42) -> None:
         by_class[str(rec["class"])].append(rec)
 
     rng = random.Random(seed)
-    if SPLITS.exists():
-        shutil.rmtree(SPLITS)
+    if work_dir.exists():
+        shutil.rmtree(work_dir)
     manifest = []
     counts: dict[str, dict[str, int]] = {}
     for cls in CLASSES:
@@ -129,7 +135,7 @@ def cmd_prepare(seed: int = 42) -> None:
         }
         counts[cls] = {k: len(v) for k, v in splits.items()}
         for split, rows in splits.items():
-            dest_dir = SPLITS / split / cls
+            dest_dir = work_dir / split / cls
             dest_dir.mkdir(parents=True, exist_ok=True)
             for i, rec in enumerate(rows, start=1):
                 src = Path(rec["path"])
@@ -140,13 +146,13 @@ def cmd_prepare(seed: int = 42) -> None:
                     shutil.copy2(src, dest)
                 manifest.append({
                     "split": split, "class": cls, "source": rec["source"],
-                    "path": str(dest.relative_to(SPLITS)),
+                    "path": str(dest.relative_to(work_dir)),
                 })
-    SPLITS.mkdir(parents=True, exist_ok=True)
-    (SPLITS / "counts.json").write_text(json.dumps(counts, indent=2), encoding="utf-8")
-    (SPLITS / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    work_dir.mkdir(parents=True, exist_ok=True)
+    (work_dir / "counts.json").write_text(json.dumps(counts, indent=2), encoding="utf-8")
+    (work_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     print(json.dumps(counts, indent=2))
-    print(f"unique images {len(records)} -> {SPLITS}")
+    print(f"unique images {len(records)} -> {work_dir}")
 
 
 def _confusion_f1(preds: list[int], targets: list[int], n_cls: int):
@@ -165,9 +171,10 @@ def _confusion_f1(preds: list[int], targets: list[int], n_cls: int):
     return matrix, acc, sum(f1s) / n_cls
 
 
-def cmd_train(epochs: int, batch_size: int, patience: int, seed: int) -> None:
-    if not (SPLITS / "train").is_dir():
-        raise SystemExit("run prepare first")
+def cmd_train(work_dir: Path, epochs: int, batch_size: int, patience: int,
+              seed: int) -> None:
+    if not (work_dir / "train").is_dir():
+        raise SystemExit("run prepare first (missing train split)")
     import torch
     import torchvision.transforms as T
     from torch import nn
@@ -194,8 +201,8 @@ def cmd_train(epochs: int, batch_size: int, patience: int, seed: int) -> None:
         T.ToTensor(),
         T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
     ])
-    train_ds = datasets.ImageFolder(SPLITS / "train", transform=train_tfms)
-    val_ds = datasets.ImageFolder(SPLITS / "val", transform=eval_tfms)
+    train_ds = datasets.ImageFolder(work_dir / "train", transform=train_tfms)
+    val_ds = datasets.ImageFolder(work_dir / "val", transform=eval_tfms)
     if list(train_ds.classes) != CLASSES:
         raise SystemExit(f"class order {train_ds.classes} != {CLASSES}")
 
@@ -311,7 +318,7 @@ def cmd_train(epochs: int, batch_size: int, patience: int, seed: int) -> None:
     blob = torch.load(CKPT_DIR / "best.pt", map_location="cpu", weights_only=False)
     model.load_state_dict(blob["model"])
     model.to(device).eval()
-    test_ds = datasets.ImageFolder(SPLITS / "test", transform=eval_tfms)
+    test_ds = datasets.ImageFolder(work_dir / "test", transform=eval_tfms)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=0)
     preds_all, t_all = [], []
     with torch.no_grad():
@@ -336,7 +343,7 @@ def cmd_train(epochs: int, batch_size: int, patience: int, seed: int) -> None:
         "device": str(device),
         "classes": CLASSES,
         "class_to_idx": train_ds.class_to_idx,
-        "split_counts": json.loads((SPLITS / "counts.json").read_text(encoding="utf-8")),
+        "split_counts": json.loads((work_dir / "counts.json").read_text(encoding="utf-8")),
         "best_epoch": best_epoch,
         "best_val_accuracy": blob["val_acc"],
         "best_macro_f1": blob["val_macro_f1"],
@@ -359,7 +366,7 @@ def cmd_train(epochs: int, batch_size: int, patience: int, seed: int) -> None:
     print(f"wrote {CKPT_DIR / 'metrics.json'}")
 
 
-def cmd_export() -> None:
+def cmd_export(work_dir: Path) -> None:
     import torch
     from torch import nn
     from torchvision import models
@@ -423,20 +430,27 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="cmd", required=True)
     p_prep = sub.add_parser("prepare")
+    p_prep.add_argument("--mendeley-root", type=Path, required=True,
+                        help="processed Mendeley 'rice' dir with train/val/test")
+    p_prep.add_argument("--work-dir", type=Path,
+                        default=DATA / "rice_v03")
     p_prep.add_argument("--seed", type=int, default=42)
     p_tr = sub.add_parser("train")
+    p_tr.add_argument("--work-dir", type=Path, default=DATA / "rice_v03")
     p_tr.add_argument("--epochs", type=int, default=25)
     p_tr.add_argument("--batch-size", type=int, default=32)
     p_tr.add_argument("--patience", type=int, default=8)
     p_tr.add_argument("--seed", type=int, default=42)
-    sub.add_parser("export")
+    p_ex = sub.add_parser("export")
+    p_ex.add_argument("--work-dir", type=Path, default=DATA / "rice_v03")
     args = parser.parse_args()
     if args.cmd == "prepare":
-        cmd_prepare(seed=args.seed)
+        cmd_prepare(args.mendeley_root, args.work_dir, seed=args.seed)
     elif args.cmd == "train":
-        cmd_train(args.epochs, args.batch_size, args.patience, args.seed)
+        cmd_train(args.work_dir, args.epochs, args.batch_size, args.patience,
+                  args.seed)
     else:
-        cmd_export()
+        cmd_export(args.work_dir)
 
 
 if __name__ == "__main__":

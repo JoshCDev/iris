@@ -1,6 +1,7 @@
 """One-off: extract Kemendagri level-IV codes from BMKG area_code_part*.pdf."""
 from __future__ import annotations
 
+import argparse
 import gzip
 import json
 import re
@@ -12,8 +13,8 @@ from pypdf import PdfReader
 _CODE = re.compile(r"(\d{2}\.\d{2}\.\d{2}\.\d{4})\s+(.*)")
 _ROW_NO = re.compile(r"^\d+\s+")
 
-PDF_DIR = Path(r"C:\xampp\htdocs\responcepat")
-OUT = Path(__file__).resolve().parents[1] / "data" / "bmkg_areas.json.gz"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+OUT = REPO_ROOT / "apps" / "api" / "data" / "bmkg_areas.json.gz"
 
 
 def _clean_name(raw: str) -> str:
@@ -22,7 +23,7 @@ def _clean_name(raw: str) -> str:
     return name
 
 
-def extract(pdf_dir: Path = PDF_DIR) -> dict[str, str]:
+def extract(pdf_dir: Path) -> dict[str, str]:
     areas: dict[str, str] = {}
     files = sorted(pdf_dir.glob("area_code_part*.pdf"))
     if not files:
@@ -44,8 +45,12 @@ def extract(pdf_dir: Path = PDF_DIR) -> dict[str, str]:
     return areas
 
 
-def main() -> None:
-    areas = extract()
+def main(pdf_dir: Path) -> None:
+    if not pdf_dir.is_dir():
+        raise SystemExit(
+            f"pdf directory not found: {pdf_dir}\n"
+            "Pass --pdf-dir containing the BMKG area_code_part*.pdf files.")
+    areas = extract(pdf_dir)
     rows = sorted(areas.items())
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with gzip.open(OUT, "wt", encoding="utf-8") as fh:
@@ -55,4 +60,9 @@ def main() -> None:
 
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    main()
+    ap = argparse.ArgumentParser(
+        description="Extract Kemendagri level-IV codes from BMKG area PDFs")
+    ap.add_argument("--pdf-dir", type=Path, required=True,
+                    help="directory containing area_code_part*.pdf")
+    args = ap.parse_args()
+    main(args.pdf_dir)

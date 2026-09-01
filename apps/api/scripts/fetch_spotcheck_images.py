@@ -1,16 +1,22 @@
 """Fetch candidate real-photo rice-disease images from Wikimedia Commons.
 
 Queries the Commons API per class, downloads the top image candidates into
-experiments/data/field_spotcheck/<class>/ for manual label verification.
+--out-dir/<class>/ for manual label verification. The output directory is
+caller-selected; there is no developer-path default.
+
+Example:
+  python apps/api/scripts/fetch_spotcheck_images.py \\
+      --out-dir experiments/data/field_spotcheck
 """
 from __future__ import annotations
 
+import argparse
 import json
 import pathlib
 import urllib.parse
 import urllib.request
 
-OUT_ROOT = pathlib.Path(r"C:\xampp\htdocs\iris-platform\experiments\data\field_spotcheck")
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 QUERIES = {
     "blast": [
@@ -60,9 +66,10 @@ def api_search(term: str, limit: int = 6) -> list[dict]:
     return out
 
 
-def main() -> None:
+def main(out_root: pathlib.Path) -> None:
+    out_root.mkdir(parents=True, exist_ok=True)
     for cls, terms in QUERIES.items():
-        dest = OUT_ROOT / cls
+        dest = out_root / cls
         dest.mkdir(parents=True, exist_ok=True)
         seen: set[str] = set()
         n = 0
@@ -90,4 +97,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser(
+        description="Fetch candidate rice-disease images from Wikimedia Commons")
+    ap.add_argument("--out-dir", type=pathlib.Path,
+                    default=REPO_ROOT / "experiments" / "data" / "field_spotcheck",
+                    help="destination directory for downloaded spot-check images")
+    args = ap.parse_args()
+    main(args.out_dir)

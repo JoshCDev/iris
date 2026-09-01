@@ -4,10 +4,18 @@ Runs the production ONNX model (apps/api/crop_packs/rice/model.onnx) over the
 prepared rice_v03 test split using the EXACT preprocessing of
 app/vision/preprocess.py (Resize shorter-side 256 + CenterCrop 224).
 
-Writes experiments/outputs/vision_test_metrics.json and prints a summary.
+Writes a vision-test-metrics JSON to --out and prints a summary.
+
+Example:
+  python apps/api/scripts/eval_vision_test.py \\
+      --test-root experiments/data/rice_v03/test \\
+      --model apps/api/crop_packs/rice/model.onnx \\
+      --classes apps/api/crop_packs/rice/model_classes.json \\
+      --out experiments/outputs/vision_test_metrics.json
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -22,22 +30,28 @@ API_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(API_DIR))
 from app.vision.preprocess import pil_to_nchw
 
-TEST_ROOT = Path(r"C:\xampp\htdocs\iris-platform\experiments\data\rice_v03\test")
-MODEL = Path(r"C:\xampp\htdocs\iris-platform\apps\api\crop_packs\rice\model.onnx")
-CLASSES_PATH = Path(r"C:\xampp\htdocs\iris-platform\apps\api\crop_packs\rice\model_classes.json")
-OUT = Path(r"C:\xampp\htdocs\iris-platform\experiments\outputs\vision_test_metrics.json")
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def preprocess(path: Path):
     return pil_to_nchw(Image.open(path).convert("RGB"))
 
 
-def main() -> None:
-    classes = json.loads(CLASSES_PATH.read_text(encoding="utf-8"))
+def main(test_root: Path, model: Path, classes_path: Path, out: Path) -> None:
+    if not test_root.is_dir():
+        raise SystemExit(
+            f"test root not found: {test_root}\n"
+            "Pass --test-root pointing at the prepared held-out test split.")
+    if not model.is_file():
+        raise SystemExit(f"model not found: {model}")
+    if not classes_path.is_file():
+        raise SystemExit(f"classes file not found: {classes_path}")
+
+    classes = json.loads(classes_path.read_text(encoding="utf-8"))
     idx_to_class = dict(enumerate(classes))
     sess_opts = ort.SessionOptions()
     sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-    session = ort.InferenceSession(str(MODEL), sess_options=sess_opts,
+    session = ort.InferenceSession(str(model), sess_options=sess_opts,
                                    providers=["CPUExecutionProvider"])
     input_name = session.get_inputs()[0].name
 
@@ -50,7 +64,7 @@ def main() -> None:
     latencies: list[float] = []
 
     for true_idx, cls in enumerate(classes):
-        folder = TEST_ROOT / cls
+        folder = test_root / cls
         files = sorted(p for p in folder.iterdir()
                        if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"})
         per_class_total[cls] = len(files)
@@ -112,7 +126,7 @@ def main() -> None:
                             "Independent field validation with Indonesian leaves "
                             "is the next milestone.",
     }
-    OUT.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    out.write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps({k: v for k, v in result.items()
                       if k not in ("confusion_matrix_rows_true_cols_pred",)},
                      indent=2))
@@ -124,4 +138,15 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    ap = argparse.ArgumentParser(
+        description="Evaluate the IRIS rice ONNX model on a held-out test split")
+    ap.add_argument("--test-root", type=Path, required=True,
+                    help="held-out test split dir (class subfolders)")
+    ap.add_argument("--model", type=Path,
+                    default=REPO_ROOT / "apps" / "api" / "crop_packs" / "rice" / "model.onnx")
+    ap.add_argument("--classes", type=Path,
+                    default=REPO_ROOT / "apps" / "api" / "crop_packs" / "rice" / "model_classes.json")
+    ap.add_argument("--out", type=Path,
+                    default=REPO_ROOT / "experiments" / "outputs" / "vision_test_metrics.json")
+    args = ap.parse_args()
+    main(args.test_root, args.model, args.classes, args.out)
