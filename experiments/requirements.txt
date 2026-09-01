@@ -1,0 +1,3 @@
+# Chart-generation dependencies (isolated from the API runtime).
+# Install with: python -m pip install -r experiments/requirements.txt
+matplotlib>=3.8,<4

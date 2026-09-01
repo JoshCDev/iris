@@ -1,14 +1,49 @@
 {
-  "days": 100,
-  "irrigations_awd": 23,
-  "irrigations_cf": 100,
-  "water_awd_m3": 5000.0,
-  "water_cf_m3": 8000.0,
-  "flooded_days_awd": 51,
-  "flooded_days_cf": 100,
-  "sf_w_eff": 0.8922,
-  "ch4_cf_kg": 130.0,
-  "ch4_awd_kg": 115.99,
-  "co2e_saved_t": 0.3784,
-  "water_saved_pct": 37.5
+  "schema_version": 1,
+  "scenario_id": "E3",
+  "scenario": {
+    "season_days": 100,
+    "area_ha": 1.0,
+    "rain_mm": 0.0,
+    "drawdown_cm_per_day": 0.8,
+    "negative_level_drawdown_multiplier": 0.5,
+    "refill_level_cm": 5.0,
+    "live_rain_hold_applied": false,
+    "scaled": false
+  },
+  "continuous_flooding": {
+    "water_m3_ha_season": 8000.0,
+    "flooded_days": 100,
+    "ch4_kg_ha_season": 130.0
+  },
+  "iris_e3": {
+    "water_m3_ha_season": 5000.0,
+    "flooded_days": 51,
+    "effective_sf_w": 0.8922,
+    "ch4_kg_ha_season": 115.99,
+    "ch4_only_avoided_co2e_t_ha_season": 0.3784
+  },
+  "differences_percent": {
+    "water": -37.5,
+    "ch4": 10.78
+  },
+  "evidence_labels": {
+    "water": "simulated",
+    "ch4": "modelled",
+    "co2e": "modelled_ch4_only"
+  },
+  "_legacy_flat": {
+    "days": 100,
+    "irrigations_awd": 23,
+    "irrigations_cf": 100,
+    "water_awd_m3": 5000.0,
+    "water_cf_m3": 8000.0,
+    "flooded_days_awd": 51,
+    "flooded_days_cf": 100,
+    "sf_w_eff": 0.8922,
+    "ch4_cf_kg": 130.0,
+    "ch4_awd_kg": 115.99,
+    "co2e_saved_t": 0.3784,
+    "water_saved_pct": 37.5
+  }
 }

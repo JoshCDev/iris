@@ -1,0 +1,6 @@
+metric,comparison,estimate,unit,effect_type,agricultural_scope,reference_id,source_location,notes
+irrigation water,AWD vs continuous flooding,-23.4,%,meta-analytic mean,irrigated lowland rice; mild AWD (water saving without yield loss),R5,abstract and Table 1,"Carrijo et al. 2017 meta-analysis; mild AWD definition; context only, not an IRIS result"
+irrigation water,AWD vs continuous flooding,-38,%,reported adoption-range upper bound,irrigated lowland rice; AWD adoption economics,R4,abstract,"Lampayan et al. 2015; Asian adoption water saving up to 38%; context only"
+methane,AWD vs continuous flooding,-51.6,%,meta-analytic mean,irrigated rice fields; overall AWD effect,R6,abstract and results,"Zhao et al. 2024 meta-analysis; context only, not an IRIS result"
+methane,AWD vs continuous flooding,-40.6,%,reported subgroup estimate,irrigated rice fields; AWD with <=3 drying events,R6,results,"Zhao et al. 2024; subgroup; deeper drying than the E3 simulation"
+methane,AWD vs continuous flooding,-49.4,%,reported subgroup estimate,irrigated rice fields; mild AWD,R6,results,"Zhao et al. 2024; mild AWD subgroup; context only"
