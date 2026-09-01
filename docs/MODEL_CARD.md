@@ -9,6 +9,8 @@
 | Output classes (5) | `bacterial_leaf_blight`, `blast`, `brown_spot`, `healthy`, `tungro` |
 | Serving stack | image guard → ONNX triage → severity → bilingual advisory → risk-fusion hook |
 | Location | `apps/api/crop_packs/rice/model.onnx` (~16.8 MB) |
+| SHA-256 | `3ec2717331b3ebc08ef664dbe2f391be9df6b05222778e2c85fe3debdf746771` |
+| Redistribution status | **Unresolved** — derived from mixed-source training data (see Training data provenance and `THIRD_PARTY_NOTICES.md`); do not redistribute the weight file until rights are recorded |
 
 ## Intended use
 
@@ -18,6 +20,14 @@ pattern most resembles (or whether the leaf looks healthy), how urgent review is
 and what field check to do next. It runs on-device-class CPU hardware as part of
 the IRIS web app (`POST /api/vision/predict`) and feeds the assistant's
 `run_vision_triage` tool.
+
+### Unacceptable uses
+
+- Autonomous disease diagnosis or treatment decisions without human review.
+- Pesticide product or dose recommendation.
+- Yield-loss or severity grading beyond the documented Urgent/Review bands.
+- Use on non-rice crops or on images that fail the quality guard.
+- Redistribution of the weight file without recorded permission.
 
 ## Out-of-scope / not a diagnosis
 

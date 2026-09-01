@@ -40,7 +40,7 @@ cd ..\api
 ..\..\.venv\Scripts\python.exe scripts\seed_demo.py
 
 # 4. Jalankan backend
-..\..\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
+..\..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Frontend dijalankan di terminal baru (lihat bagian [Menjalankan](#menjalankan)).
@@ -64,20 +64,25 @@ cd ../api
 ../../.venv/bin/python scripts/seed_demo.py
 
 # 4. Jalankan backend
-../../.venv/bin/python -m uvicorn app.main:app --port 8000
+../../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ## Variabel Lingkungan
 
 | Variabel | Default | Wajib? | Keterangan |
 | --- | --- | --- | --- |
+| `IRIS_DEMO_MODE` | `1` | Tidak | `1` = demo lokalhost. `0` = non-demo: aplikasi menolak start jika `IRIS_DEVICE_TOKEN` kosong, dan route interaktif plot/daun/chat/konfirmasi menolak akses (403) karena lapisan autentikasi pengguna belum ada |
 | `DEEPSEEK_API_KEY` | kosong | Tidak | Kunci API LLM. Jika kosong → asisten berjalan **mode offline** dengan badge di UI |
 | `IRIS_LLM_MODEL` | `deepseek-v4-flash-vision-exp` | Tidak | ID model DeepSeek (vision-exp, 21 Agustus 2026) |
 | `IRIS_DB` | anchor absolut ke `apps/api/storage/iris.db` | Tidak | Lokasi database SQLite. Default tidak bergantung direktori kerja proses |
-| `IRIS_DEVICE_TOKEN` | kosong (tidak aktif) | Tidak | Jika diset, `POST /api/ingest` wajib menyertakan header `X-IRIS-Token` (divalidasi constant-time compare) |
-| `WEB_ORIGIN` | kosong | Tidak | Origin frontend untuk CORS |
+| `IRIS_DEVICE_TOKEN` | kosong (tidak aktif) | Tidak | Jika diset, `POST /api/ingest` wajib menyertakan header `X-IRIS-Token` (divalidasi constant-time compare). Wajib saat `IRIS_DEMO_MODE=0` |
+| `WEB_ORIGIN` | `http://localhost:3000` | Tidak | Origin frontend untuk CORS. Jangan pakai `*` |
 | `BMKG_ADM4` | `33.73.01.1003` | Tidak | Kode wilayah tingkat IV (kelurahan/desa) untuk prakiraan BMKG. Default: Kelurahan Salatiga, Kec. Sidorejo |
 | `BMKG_API_KEY` | kosong | Tidak | Opsional. Endpoint publik BMKG tidak mewajibkan kunci |
+
+Backend hanya dijalankan di **loopback** untuk demo:
+`uvicorn app.main:app --host 127.0.0.1 --port 8000`. Tidak ada mode
+deployment Internet yang didukung oleh prototipe ini.
 
 LogReg hujan (`rain_hitl.py` / `rain_logreg.json`) memanggil Open-Meteo untuk
 hujan 1/3 hari terakhir agar model punya fitur. Jika panggilan gagal, LogReg
@@ -91,7 +96,7 @@ dijalankan):
 ```powershell
 $env:DEEPSEEK_API_KEY = "sk-..."
 $env:IRIS_DEVICE_TOKEN = "token-perangkat-yang-kuat"
-..\..\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
+..\..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ## Menjalankan
@@ -101,7 +106,7 @@ $env:IRIS_DEVICE_TOKEN = "token-perangkat-yang-kuat"
 Dari folder `apps/api`:
 
 ```powershell
-..\..\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
+..\..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ### Frontend produksi (terminal baru)

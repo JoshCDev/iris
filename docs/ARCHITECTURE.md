@@ -106,7 +106,6 @@ asisten.
 - `docs/IPCC_ACCOUNTING.md` - detail akuntansi CH4/CO2e Tier-1
 - `docs/SENSOR_VALIDATION.md` - prosedur validasi sensor
 - `docs/DEPLOYMENT_GUIDE.md` - panduan deployment
-- `docs/poster-content.md` - konten poster
 - `docs/MODEL_CARD.md` - kartu model visi
 - `experiments/DEFINISI_METRIK.md` - definisi metrik eksperimen
 - `docs/history/` - arsip
