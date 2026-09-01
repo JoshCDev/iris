@@ -8,7 +8,7 @@ repository reached by the poster QR code:
 - no personal absolute paths in tracked text sources;
 - required public files exist (docs, evidence charts, context CSV);
 - the committed E3 backtest matches the pinned README numbers;
-- README references [R1]..[R14] are each defined exactly once;
+- README references [1]..[14] are each defined exactly once;
 - the ONNX weight hash matches the model card.
 
 Usage:  python scripts/verify_public_readiness.py
@@ -139,17 +139,16 @@ def main() -> int:
     except (OSError, json.JSONDecodeError, KeyError) as exc:
         check(False, f"E3 backtest readable: {exc}")
 
-    # 5. README references R1..R14 defined exactly once.
+    # 5. README references [1]..[14] defined exactly once.
     try:
         readme = (REPO / "README.md").read_text(encoding="utf-8")
         for n in range(1, 15):
-            defined = len(re.findall(rf"\*\*\[R{n}\]\*\*", readme))
+            defined = len(re.findall(rf"\*\*\[{n}\]\*\*", readme))
             if defined != 1:
-                check(False, f"README [{R if False else n}] defined once "
-                             f"(found {defined})")
+                check(False, f"README [{n}] defined once (found {defined})")
                 break
         else:
-            check(True, "README references R1..R14 each defined once")
+            check(True, "README references [1]..[14] each defined once")
     except OSError as exc:
         check(False, f"README readable: {exc}")
 

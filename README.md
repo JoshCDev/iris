@@ -37,15 +37,15 @@ These labels are deliberate: **working prototype**, **simulated**,
 **The National Water Challenge**
 
 Indonesia harvested 10.05 million hectares of paddy and produced 53.14
-million tonnes of dry unhusked paddy in 2024 [R1], making rice water
+million tonnes of dry unhusked paddy in 2024 [1], making rice water
 management a national sustainability concern.
 
 **The Evidence-Based Opportunity**
 
 IRRI's safe AWD protocol lets the field water table fall to −15 cm before
-refilling to about +5 cm and protects the flowering flood [R3]; field
+refilling to about +5 cm and protects the flowering flood [3]; field
 evidence shows that AWD can reduce irrigation and CH₄ while maintaining
-yield, although N₂O may rise [R4], [R5], [R6].
+yield, although N₂O may rise [4], [5], [6].
 
 **Research Objective**
 
@@ -66,10 +66,10 @@ farmer or extension officer decides.
    the farmer confirms crop stage and adds a leaf photo when needed.
 2. **ADD CONTEXT.** IRIS retrieves the official BMKG 72-hour forecast and
    applies its ≥15 mm project rain-hold rule; BMKG alone enters the scheduler
-   [R12].
+   [12].
 3. **ANALYSE.** Stage rules protect establishment and flowering and apply
    safe AWD during vegetative and grain-fill stages; MobileNetV3-Large
-   screens five leaf classes [R3], [R9].
+   screens five leaf classes [3], [9].
 4. **COMBINE + EXPLAIN.** Rules combine water, weather, and leaf signals;
    the assistant explains the same plot record and uses the knowledge base as
    fallback.
@@ -84,15 +84,15 @@ farmer or extension officer decides.
   uses 0.8 cm day⁻¹ drawdown and stage-aware refill to +5 cm. CH₄ follows
   IPCC Tier 1 with a declared project SF_w interpolation and GWP100 = 27;
   the run excludes live rain-hold, N₂O, and field measurements
-  [R2], [R6], [R7].
+  [2], [6], [7].
 - **PUBLIC-DATASET LEAF TEST:** The classifier uses Sethy and Paddy Doctor
-  images [R10], [R11], [R13]. The held-out split provides public-dataset
+  images [10], [11], [13]. The held-out split provides public-dataset
   evidence; its raw manifest is absent, and Indonesian field leaves remain
   untested.
 - **SECONDARY RAIN REVIEW:** Logistic regression uses Open-Meteo rain for
   Salatiga (2018–2026; *n* = 3,154) without a held-out test. It only flags
   disagreement or uncertainty for review; BMKG remains the scheduler input
-  [R12], [R14].
+  [12], [14].
 
 **FIELD VALIDATION PENDING:** sensor calibration, water use, yield,
 emissions, usability, and Indonesian leaf performance.
@@ -150,13 +150,13 @@ end-of-day level was −14.2 cm (Fig. 1).
 **Fig. 1.** Water-table trace for the 100-day project simulation (0 mm rain),
 including pre-refill and end-of-day states. Triangles mark model top-ups, and
 the yellow band marks the flowering flood. The dashed −15 cm line is the
-safe-AWD trigger [R3]; it did not trigger a vegetative or grain-fill refill.
+safe-AWD trigger [3]; it did not trigger a vegetative or grain-fill refill.
 
 ![IRIS E3 water-table trace](assets/poster/chart_water_trace.png)
 
 **Fig. 2.** Seasonal irrigation volume and modelled CH₄. The unrounded CH₄
 difference is 14.014 kg ha⁻¹; CO₂e = 14.014 × 27 / 1000 = 0.3784 t ha⁻¹
-season⁻¹ [R2], [R7]. N₂O is omitted.
+season⁻¹ [2], [7]. N₂O is omitted.
 
 ![IRIS E3 simulated seasonal results](assets/poster/chart_results.png)
 
@@ -171,7 +171,7 @@ The CH₄ scenario uses `1.30 × SF_w × t × A`, assumes `SF_p = SF_o = 1`, and
 obtains effective `SF_w = 0.8922` by interpolating continuous flooding `1.00`
 and the 2006 aggregate irrigated factor `0.78` from 51 flooded days. IPCC
 does not prescribe that interpolation. The 2019 Refinement gives
-`SF_w = 0.55` for multiple drainage [R8], but this project run does not
+`SF_w = 0.55` for multiple drainage [8], but this project run does not
 substitute that factor. GWP100 is 27, and omitting N₂O makes avoided CO₂e an
 upper bound. See [IPCC accounting](docs/IPCC_ACCOUNTING.md).
 
@@ -179,9 +179,9 @@ upper bound. See [IPCC accounting](docs/IPCC_ACCOUNTING.md).
 
 | Outcome vs continuous flooding | IRIS E3               | Field-literature context                           |
 | ------------------------------ | --------------------- | -------------------------------------------------- |
-| Irrigation water               | −37.5% `[simulated]`  | Mild AWD −23.4% [R5]; Asian adoption up to −38% [R4] |
-| CH₄                            | −10.8% `[modelled]`   | Overall AWD −51.6% [R6]                             |
-| Climate scope                  | CH₄ only; N₂O omitted | Combined CH₄+N₂O GWP −46.9%, with N₂O +44.0% [R6]   |
+| Irrigation water               | −37.5% `[simulated]`  | Mild AWD −23.4% [5]; Asian adoption up to −38% [4] |
+| CH₄                            | −10.8% `[modelled]`   | Overall AWD −51.6% [6]                             |
+| Climate scope                  | CH₄ only; N₂O omitted | Combined CH₄+N₂O GWP −46.9%, with N₂O +44.0% [6]   |
 
 Present the literature values only as percentages versus continuous
 flooding; do not convert them to IRIS absolute units, and do not present them
@@ -191,7 +191,7 @@ as a field validation of this software.
 
 The current ONNX model screens bacterial leaf blight, blast, brown spot,
 healthy, and tungro. The classifier uses Sethy and Paddy Doctor images
-[R10], [R11], [R13]. The held-out split provides public-dataset evidence;
+[10], [11], [13]. The held-out split provides public-dataset evidence;
 its raw manifest is absent, and Indonesian field leaves remain untested. The
 committed model card records the split counts, preprocessing, known earlier
 leakage, and domain limitations.
@@ -221,11 +221,11 @@ repeatable calculation; field measurements have not been made.
 
 ## Conclusion
 
-IRIS does not replace IRRI's safe-AWD protocol [R3]. It puts that protocol,
+IRIS does not replace IRRI's safe-AWD protocol [3]. It puts that protocol,
 canopy-anomaly triage, and a plot assistant on the same plot, with a person
 in the loop. Its water and CH₄ figures are project simulations; the CH₄
 scenario uses the IPCC Tier 1 equation plus a clearly stated project
-interpolation [R7]. Field sensors, chamber CH₄ measurements, yield
+interpolation [7]. Field sensors, chamber CH₄ measurements, yield
 measurements, and Indonesian leaf-image tests have not been carried out.
 
 ## Technical notes
@@ -257,7 +257,7 @@ against the figures above.
   obtains effective `SF_w = 0.8922` by interpolating continuous flooding
   `1.00` and the 2006 aggregate irrigated factor `0.78` from 51 flooded days.
   IPCC does not prescribe that interpolation. The 2019 Refinement gives
-  `SF_w = 0.55` for multiple drainage [R8], but this project run does not
+  `SF_w = 0.55` for multiple drainage [8], but this project run does not
   substitute that factor. GWP100 is 27, and omitting N₂O makes avoided CO₂e
   an upper bound.
 - The 30-day demo plot and the 100-day evidence run are separate. The
@@ -357,48 +357,48 @@ model. See [SECURITY.md](SECURITY.md).
 
 ## References
 
-- **[R1]** Badan Pusat Statistik. “Pada 2024, luas panen padi mencapai sekitar
+- **[1]** Badan Pusat Statistik. “Pada 2024, luas panen padi mencapai sekitar
   10,05 juta hektare dengan produksi padi sebanyak 53,14 juta ton GKG,” 2025.
   <https://www.bps.go.id/id/pressrelease/2025/02/03/2414/>
-- **[R2]** Forster, P., et al. “The Earth's energy budget, climate feedbacks,
+- **[2]** Forster, P., et al. “The Earth's energy budget, climate feedbacks,
   and climate sensitivity.” *IPCC AR6 WGI*, Chapter 7 and Supplementary
   Material Table 7.SM.7, 2021. <https://doi.org/10.1017/9781009157896.009>
-- **[R3]** International Rice Research Institute. “Saving water with
+- **[3]** International Rice Research Institute. “Saving water with
   alternate wetting drying (AWD).” *Rice Knowledge Bank*.
   <https://www.knowledgebank.irri.org/training/fact-sheets/water-management/saving-water-alternate-wetting-drying-awd>
-- **[R4]** Lampayan, R. M., Rejesus, R. M., Singleton, G. R., and Bouman,
+- **[4]** Lampayan, R. M., Rejesus, R. M., Singleton, G. R., and Bouman,
   B. A. M. “Adoption and economics of alternate wetting and drying water
   management for irrigated lowland rice.” *Field Crops Research* 170 (2015):
   95-108. <https://doi.org/10.1016/j.fcr.2014.10.013>
-- **[R5]** Carrijo, D. R., Lundy, M. E., and Linquist, B. A. “Rice yields and
+- **[5]** Carrijo, D. R., Lundy, M. E., and Linquist, B. A. “Rice yields and
   water use under alternate wetting and drying irrigation: A meta-analysis.”
   *Field Crops Research* 203 (2017): 173-180.
   <https://doi.org/10.1016/j.fcr.2016.12.002>
-- **[R6]** Zhao, C., Qiu, R., Zhang, T., Luo, Y., and Agathokleous, E.
+- **[6]** Zhao, C., Qiu, R., Zhang, T., Luo, Y., and Agathokleous, E.
   “Effects of alternate wetting and drying irrigation on methane and nitrous
   oxide emissions from rice fields: A meta-analysis.” *Global Change Biology*
   30, no. 12 (2024): e17581. <https://doi.org/10.1111/gcb.17581>
-- **[R7]** IPCC. *2006 IPCC Guidelines for National Greenhouse Gas
+- **[7]** IPCC. *2006 IPCC Guidelines for National Greenhouse Gas
   Inventories*, Vol. 4, Ch. 5, Eqs. 5.1-5.2 and Tables 5.11-5.12.
   <https://www.ipcc-nggip.iges.or.jp/public/2006gl/pdf/4_Volume4/V4_05_Ch5_Cropland.pdf>
-- **[R8]** IPCC. *2019 Refinement to the 2006 IPCC Guidelines*, Vol. 4,
+- **[8]** IPCC. *2019 Refinement to the 2006 IPCC Guidelines*, Vol. 4,
   Ch. 5, Table 5.12.
   <https://www.ipcc-nggip.iges.or.jp/public/2019rf/pdf/4_Volume4/19R_V4_Ch05_Cropland.pdf>
-- **[R9]** Howard, A., et al. “Searching for MobileNetV3.” *ICCV* (2019):
+- **[9]** Howard, A., et al. “Searching for MobileNetV3.” *ICCV* (2019):
   1314-1324. <https://doi.org/10.1109/ICCV.2019.00140>
-- **[R10]** Sethy, P. K., Barpanda, N. K., Rath, A. K., and Behera, S. K.
+- **[10]** Sethy, P. K., Barpanda, N. K., Rath, A. K., and Behera, S. K.
   “Deep feature based rice leaf disease identification using support vector
   machine.” *Computers and Electronics in Agriculture* 175 (2020): 105527.
   <https://doi.org/10.1016/j.compag.2020.105527>
-- **[R11]** Sethy, P. K. “Rice Leaf Disease Image Samples.” Mendeley Data,
+- **[11]** Sethy, P. K. “Rice Leaf Disease Image Samples.” Mendeley Data,
   Version 1, 2020. <https://doi.org/10.17632/fwcj7stb8r.1>
-- **[R12]** Badan Meteorologi, Klimatologi, dan Geofisika. “Data Prakiraan
+- **[12]** Badan Meteorologi, Klimatologi, dan Geofisika. “Data Prakiraan
   Cuaca Terbuka.” <https://data.bmkg.go.id/prakiraan-cuaca/>
-- **[R13]** Petchiammal, A., Briskline Kiruba, S., Murugan, D., and
+- **[13]** Petchiammal, A., Briskline Kiruba, S., Murugan, D., and
   Pandarasamy, A. “Paddy Doctor: A Visual Image Dataset for Automated Paddy
   Disease Classification and Benchmarking.” *CODS-COMAD* (2023): 203-207.
   <https://doi.org/10.1145/3570991.3570994>
-- **[R14]** Open-Meteo. “Historical Weather API.”
+- **[14]** Open-Meteo. “Historical Weather API.”
   <https://open-meteo.com/en/docs/historical-weather-api>;
   software record <https://doi.org/10.5281/zenodo.7970649>.
 
